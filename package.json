@@ -1,8 +1,0 @@
-{
-  "name": "return-manager-monorepo",
-  "private": true,
-  "scripts": {
-    "build": "cd ai-return-manager && npm install && npm run build",
-    "install-all": "cd ai-return-manager && npm install"
-  }
-}
