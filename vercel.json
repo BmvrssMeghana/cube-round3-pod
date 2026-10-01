@@ -1,18 +1,11 @@
 {
   "version": 2,
-  "builds": [
+  "buildCommand": "cd ai-return-manager && npm install && npm run build",
+  "outputDirectory": "ai-return-manager/dist",
+  "rewrites": [
     {
-      "src": "ai-return-manager/package.json",
-      "use": "@vercel/vite"
-    }
-  ],
-  "routes": [
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/ai-return-manager/$1"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
