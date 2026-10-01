@@ -7,13 +7,20 @@ from sqlalchemy.orm import sessionmaker
 from config import DATABASE_URL
 from models import Base, Product
 
+db_url = DATABASE_URL
+if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+elif db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+
 engine = create_engine(
-    DATABASE_URL,
+    db_url,
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,       # reconnect on stale connections
     pool_recycle=300,         # recycle connections every 5 min
 )
+
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
