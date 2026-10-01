@@ -1,0 +1,38 @@
+# ── Secrets — NEVER commit these ─────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.so
+venv/
+.venv/
+env/
+*.db
+*.sqlite3
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+ai-return-manager/node_modules/
+ai-return-manager/dist/
+ai-return-manager/.env
+ai-return-manager/.env.local
+
+# ── Uploads (local dev only) ──────────────────────────────────────────────────
+uploads/
+
+# ── OS / Editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
