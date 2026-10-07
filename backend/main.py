@@ -58,15 +58,17 @@ app = FastAPI(
     version="2.0.0",
 )
 
+frontend_origins = [origin.strip() for origin in FRONTEND_URL.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        FRONTEND_URL,
+    allow_origins=frontend_origins + [
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",
         "http://localhost:3000",
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -83,6 +85,11 @@ def on_startup():
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
+
+@app.get("/")
+def root():
+    return {"message": "Return Manager API is running", "docs": "/docs", "health": "/health"}
+
 
 @app.get("/health")
 def health():
