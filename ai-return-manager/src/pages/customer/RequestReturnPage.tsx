@@ -52,27 +52,26 @@ export function RequestReturnPage({ order, onSuccess, onCancel }: RequestReturnP
   return (
     <Layout title="Request Return"
       subtitle={`Order #${order.id} · ${order.product?.name ?? `Product #${order.product_id}`}`}>
-      <div className="max-w-lg">
-        <form onSubmit={handleSubmit} className="rounded-2xl card-red p-6 flex flex-col gap-5 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(180,0,0,0.2),transparent_70%)] pointer-events-none" />
-          <div className="relative z-10 flex flex-col gap-5">
+      <div className="max-w-xl mx-auto">
+        <form onSubmit={handleSubmit} className="card-rm p-6 flex flex-col gap-6">
+          <div className="flex flex-col gap-6">
 
             {/* Reasons */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3">
-                Return Reason <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text2)] mb-3">
+                Return Reason <span className="text-[var(--red)]">*</span>
               </label>
-              <div className="flex flex-col gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {RETURN_REASONS.map((r) => (
                   <label key={r.value}
-                    className={`flex items-center gap-3 cursor-pointer rounded-xl px-4 py-3 border transition-all ${
+                    className={`flex items-center gap-3 cursor-pointer rounded-lg px-3.5 py-3 border transition-all ${
                       reason === r.value
-                        ? 'border-red-500/50 bg-red-500/10'
-                        : 'border-white/5 bg-white/[0.02] hover:border-white/15 hover:bg-white/5'
+                        ? 'border-[var(--accent)] bg-[var(--accent-glow)] text-[var(--text)] font-semibold'
+                        : 'border-[var(--border)] bg-[var(--bg3)] text-[var(--text2)] hover:border-[var(--border2)]'
                     }`}>
                     <input type="radio" name="reason" value={r.value} checked={reason === r.value}
-                      onChange={() => setReason(r.value)} className="accent-red-500" />
-                    <span className="text-sm text-white/70">{r.label}</span>
+                      onChange={() => setReason(r.value)} className="accent-[var(--accent)]" />
+                    <span className="text-xs">{r.label}</span>
                   </label>
                 ))}
               </div>
@@ -80,23 +79,23 @@ export function RequestReturnPage({ order, onSuccess, onCancel }: RequestReturnP
 
             {/* Description */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">
-                Additional Details <span className="text-white/20">(optional)</span>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text2)] mb-1.5">
+                Additional Details <span className="text-[var(--text3)] font-normal">(optional)</span>
               </label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
-                placeholder="Describe the issue…"
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-red-500/50 resize-none transition-colors" />
+                placeholder="Describe the issue in detail…"
+                className="w-full rounded-lg bg-[var(--bg3)] border border-[var(--border2)] px-3.5 py-2.5 text-sm text-[var(--text)] placeholder-[var(--text3)] focus:outline-none focus:border-[var(--accent)] resize-none transition-colors" />
             </div>
 
             {/* Photo */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">
-                Product Photo <span className="text-white/20">(recommended)</span>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text2)] mb-1.5">
+                Product Photo <span className="text-[var(--text3)] font-normal">(recommended)</span>
               </label>
               <input type="file" accept="image/*" onChange={handlePhotoChange}
-                className="block w-full text-xs text-white/40 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-widest file:bg-white/10 file:text-white/60 hover:file:bg-white/15 cursor-pointer" />
+                className="block w-full text-xs text-[var(--text2)] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border file:border-[var(--border2)] file:text-xs file:font-semibold file:bg-[var(--bg3)] file:text-[var(--text)] hover:file:bg-[var(--border)] cursor-pointer" />
               {preview && (
-                <div className="mt-3 rounded-xl overflow-hidden border border-white/10 w-40 h-40">
+                <div className="mt-3 rounded-lg overflow-hidden border border-[var(--border)] w-40 h-40 bg-[var(--bg3)]">
                   <img src={preview} alt="Preview" className="w-full h-full object-cover" />
                 </div>
               )}
@@ -104,13 +103,13 @@ export function RequestReturnPage({ order, onSuccess, onCancel }: RequestReturnP
 
             <ErrorMessage message={error} onDismiss={() => setError(null)} />
 
-            <div className="flex gap-2 pt-1">
+            <div className="flex gap-3 pt-2 border-t border-[var(--border)]">
               <button type="button" onClick={onCancel}
-                className="flex-1 rounded-full border border-white/15 text-white/50 text-xs font-bold uppercase tracking-widest py-2.5 hover:border-white/30 hover:text-white/70 transition-all">
+                className="btn-secondary-rm flex-1">
                 Cancel
               </button>
               <button type="submit" disabled={submitting}
-                className="flex-1 rounded-full bg-gradient-to-r from-red-800 to-red-600 text-white text-xs font-bold uppercase tracking-widest py-2.5 hover:from-red-700 hover:to-red-500 disabled:opacity-40 transition-all">
+                className="btn-primary-rm flex-1">
                 {submitting ? 'Submitting…' : 'Submit Return'}
               </button>
             </div>
@@ -120,3 +119,4 @@ export function RequestReturnPage({ order, onSuccess, onCancel }: RequestReturnP
     </Layout>
   )
 }
+

@@ -12,8 +12,9 @@ const sizeMap = {
 export function Spinner({ size = 'md', label = 'Loading…' }: SpinnerProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-12" role="status" aria-label={label}>
-      <div className={`${sizeMap[size]} rounded-full border-white/10 border-t-red-500 animate-spin`} />
-      <span className="text-xs text-white/30 uppercase tracking-widest">{label}</span>
+      <div className={`${sizeMap[size]} rounded-full border-[var(--border2)] border-t-[var(--accent)] animate-spin`} />
+      <span className="text-xs text-[var(--text3)] uppercase tracking-wider font-semibold">{label}</span>
     </div>
   )
 }
+

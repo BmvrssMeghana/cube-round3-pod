@@ -3,17 +3,17 @@ import type { DamageLevel, FinalDecision, OrderStatus, Recommendation, ReturnSta
 type BadgeVariant = 'green' | 'red' | 'yellow' | 'blue' | 'gray' | 'orange'
 
 const variantClasses: Record<BadgeVariant, string> = {
-  green:  'bg-green-500/15 text-green-400 border border-green-500/30',
-  red:    'bg-red-500/15 text-red-400 border border-red-500/30',
-  yellow: 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30',
-  blue:   'bg-blue-500/15 text-blue-400 border border-blue-500/30',
-  gray:   'bg-white/5 text-white/40 border border-white/10',
-  orange: 'bg-orange-500/15 text-orange-400 border border-orange-500/30',
+  green:  'bg-[var(--green-bg)] text-[var(--green)] border border-[rgba(13,148,136,0.3)]',
+  red:    'bg-[var(--red-bg)] text-[var(--red)] border border-[rgba(224,38,78,0.3)]',
+  yellow: 'bg-[var(--amber-bg)] text-[var(--amber)] border border-[rgba(217,119,6,0.3)]',
+  blue:   'bg-[var(--blue-bg)] text-[var(--blue)] border border-[rgba(37,99,235,0.3)]',
+  gray:   'bg-[var(--muted-bg)] text-[var(--text3)] border border-[var(--border2)]',
+  orange: 'bg-[var(--purple-bg)] text-[var(--purple)] border border-[rgba(124,58,237,0.3)]',
 }
 
 function badge(label: string, variant: BadgeVariant) {
   return (
-    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${variantClasses[variant]}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${variantClasses[variant]}`}>
       {label}
     </span>
   )
@@ -77,3 +77,4 @@ export function FinalDecisionBadge({ decision }: { decision: FinalDecision | nul
   const [label, variant] = map[decision] ?? [decision, 'gray']
   return badge(label, variant)
 }
+

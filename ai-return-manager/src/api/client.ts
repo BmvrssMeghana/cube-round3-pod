@@ -15,15 +15,25 @@ import type {
 
 const BASE_URL =
   import.meta.env.VITE_API_URL ||
-  (import.meta.env.PROD ? 'https://return-manager-backend.onrender.com' : 'http://localhost:8000')
+  (import.meta.env.PROD ? 'https://return-manager-backend.onrender.com' : 'http://127.0.0.1:8000')
 
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-    ...init,
-  })
+  const url = path.startsWith('http') ? path : `${BASE_URL}${path}`
+  let res: Response
+  try {
+    res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      ...init,
+    })
+  } catch (err) {
+    // Retry with relative proxy path if direct 127.0.0.1 fetch fails
+    res = await fetch(`/api${path}`, {
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      ...init,
+    })
+  }
 
   if (!res.ok) {
     let message = `HTTP ${res.status}`

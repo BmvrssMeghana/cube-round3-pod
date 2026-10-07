@@ -24,7 +24,6 @@ function cap(s: string) {
 // ── Print stylesheet — self-contained white/black for PDF readability ─────────
 const PRINT_STYLES = `
 @media print {
-  /* hide everything on the page except our report */
   body * { visibility: hidden !important; }
   #rm-report, #rm-report * { visibility: visible !important; }
   #rm-report {
@@ -34,8 +33,8 @@ const PRINT_STYLES = `
     padding: 32px !important;
     background: #fff !important;
     color: #000 !important;
+    font-family: 'Manrope', sans-serif;
   }
-  /* override dark tailwind classes for print */
   #rm-report .rm-card {
     background: #f8f8f8 !important;
     border: 1px solid #ddd !important;
@@ -46,7 +45,7 @@ const PRINT_STYLES = `
   #rm-report .rm-label { color: #666 !important; font-size: 9px !important; }
   #rm-report .rm-value { color: #000 !important; font-size: 13px !important; }
   #rm-report .rm-section-title {
-    color: #cc0000 !important;
+    color: #4f46e5 !important;
     font-size: 9px !important;
     font-weight: 700 !important;
     text-transform: uppercase;
@@ -64,11 +63,11 @@ const PRINT_STYLES = `
 `
 
 const accentBorder: Record<string, string> = {
-  green:  'border-l-2 border-green-500',
-  red:    'border-l-2 border-red-500',
-  yellow: 'border-l-2 border-yellow-500',
-  blue:   'border-l-2 border-blue-400',
-  gray:   'border-l-2 border-white/10',
+  green:  'border-l-4 border-l-[var(--green)]',
+  red:    'border-l-4 border-l-[var(--red)]',
+  yellow: 'border-l-4 border-l-[var(--amber)]',
+  blue:   'border-l-4 border-l-[var(--accent)]',
+  gray:   'border-l-4 border-l-[var(--border2)]',
 }
 
 function Cell({
@@ -79,9 +78,9 @@ function Cell({
   accent?: string
 }) {
   return (
-    <div className={`rm-card rounded-xl bg-white/[0.04] p-4 flex flex-col gap-1.5 ${accentBorder[accent] ?? accentBorder.gray}`}>
-      <span className="rm-label text-[9px] font-bold uppercase tracking-widest text-white/25">{label}</span>
-      <span className="rm-value text-sm font-semibold text-white leading-snug">{value}</span>
+    <div className={`rm-card rounded-lg bg-[var(--bg3)] p-3.5 flex flex-col gap-1 border border-[var(--border)] ${accentBorder[accent] ?? accentBorder.gray}`}>
+      <span className="rm-label text-[10px] font-bold uppercase tracking-wider text-[var(--text3)]">{label}</span>
+      <span className="rm-value text-sm font-bold text-[var(--text)] leading-snug">{value}</span>
     </div>
   )
 }
@@ -89,7 +88,7 @@ function Cell({
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div className="col-span-full mt-3">
-      <p className="rm-section-title text-[9px] font-bold uppercase tracking-widest text-red-500/60 pb-1 border-b border-white/10">
+      <p className="rm-section-title text-xs font-bold uppercase tracking-wider text-[var(--accent2)] pb-1 border-b border-[var(--border)]">
         {children}
       </p>
     </div>
@@ -103,36 +102,34 @@ export function InspectionReport({ inspection, ret, originalSrc, returnedSrc }: 
   const decAccent = inspection.final_decision === 'ACCEPTED' ? 'green' : inspection.final_decision === 'REJECTED' ? 'red' : 'yellow'
 
   const recColor = inspection.recommendation === 'ACCEPT'
-    ? 'bg-green-500/20 text-green-400'
+    ? 'bg-[var(--green-bg)] text-[var(--green)] border border-[rgba(13,148,136,0.3)]'
     : inspection.recommendation === 'REJECT'
-    ? 'bg-red-500/20 text-red-400'
-    : 'bg-yellow-500/20 text-yellow-400'
+    ? 'bg-[var(--red-bg)] text-[var(--red)] border border-[rgba(224,38,78,0.3)]'
+    : 'bg-[var(--amber-bg)] text-[var(--amber)] border border-[rgba(217,119,6,0.3)]'
 
   return (
     <>
       <style>{PRINT_STYLES}</style>
 
-      <div id="rm-report" className="relative">
-        <div className="rounded-2xl card-red glow-red p-6 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(180,0,0,0.2),transparent_60%)] pointer-events-none" />
-
-          <div className="relative z-10">
+      <div id="rm-report" className="relative mt-6">
+        <div className="card-rm p-6">
+          <div>
 
             {/* ── Report header ── */}
-            <div className="flex items-start justify-between mb-6 pb-5 border-b border-white/10">
+            <div className="flex items-start justify-between mb-6 pb-5 border-b border-[var(--border)]">
               <div>
-                <h3 className="rm-header-title text-lg font-black uppercase tracking-widest text-white">
+                <h3 className="rm-header-title text-lg font-bold tracking-tight text-[var(--text)]">
                   AI Inspection Report
                 </h3>
-                <p className="rm-header-sub text-xs text-white/30 mt-0.5 uppercase tracking-wide">
+                <p className="rm-header-sub text-xs text-[var(--text3)] mt-0.5 uppercase tracking-wider">
                   Return #{ret.id} · Order #{ret.order_id}
                   {ret.order?.product?.name && ` · ${ret.order.product.name}`}
                 </p>
-                <p className="rm-header-sub text-[10px] text-white/20 mt-0.5 uppercase tracking-widest">
+                <p className="rm-header-sub text-[11px] text-[var(--text3)] mt-0.5">
                   Generated: {new Date().toLocaleString()}
                 </p>
               </div>
-              <div className={`rm-rec-badge px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${recColor}`}>
+              <div className={`rm-rec-badge px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${recColor}`}>
                 {inspection.recommendation?.replace(/_/g, ' ') ?? '—'}
               </div>
             </div>
@@ -149,9 +146,9 @@ export function InspectionReport({ inspection, ret, originalSrc, returnedSrc }: 
               <Cell label="Return Reason" value={cap(ret.reason)} />
               <Cell label="Submitted"     value={fmt(ret.created_at)} />
               {ret.reason_description && (
-                <div className="rm-card col-span-full rounded-xl bg-white/[0.04] p-4 border-l-2 border-white/10">
-                  <span className="rm-label text-[9px] font-bold uppercase tracking-widest text-white/25 block mb-1">Customer Description</span>
-                  <span className="rm-value text-sm text-white/60">{ret.reason_description}</span>
+                <div className="rm-card col-span-full rounded-lg bg-[var(--bg3)] p-4 border border-[var(--border)] border-l-4 border-l-[var(--border2)]">
+                  <span className="rm-label text-[10px] font-bold uppercase tracking-wider text-[var(--text3)] block mb-1">Customer Description</span>
+                  <span className="rm-value text-sm text-[var(--text)]">{ret.reason_description}</span>
                 </div>
               )}
 
@@ -161,7 +158,7 @@ export function InspectionReport({ inspection, ret, originalSrc, returnedSrc }: 
               <Cell label="Missing Parts"           value={inspection.missing_parts.length === 0 ? '✓ None' : `✗ ${inspection.missing_parts.map(cap).join(', ')}`} accent={inspection.missing_parts.length === 0 ? 'green' : 'red'} />
               <Cell label="Return Reason Supported" value={inspection.return_reason_supported ? '✓ Yes' : '✗ No'}  accent={inspection.return_reason_supported ? 'green' : 'red'} />
               <Cell label="Damage Level"            value={cap(dmgLevel)}                                           accent={dmgAccent} />
-              <Cell label="AI Confidence"           value={<span className="text-xl font-black">{pct(inspection.confidence)}</span>} accent="blue" />
+              <Cell label="AI Confidence"           value={<span className="text-xl font-extrabold text-[var(--accent2)]">{pct(inspection.confidence)}</span>} accent="blue" />
               <Cell label="AI Recommendation"       value={cap(inspection.recommendation ?? '—')}                  accent={recAccent} />
               <Cell label="Inspection Date"         value={fmt(inspection.created_at)} />
 
@@ -189,11 +186,11 @@ export function InspectionReport({ inspection, ret, originalSrc, returnedSrc }: 
               {inspection.evidence.length > 0 && (
                 <>
                   <SectionTitle>AI Evidence</SectionTitle>
-                  <div className="rm-card col-span-full rounded-xl bg-white/[0.04] p-4 border-l-2 border-blue-400">
-                    <ul className="flex flex-col gap-1.5">
+                  <div className="rm-card col-span-full rounded-lg bg-[var(--bg3)] p-4 border border-[var(--border)] border-l-4 border-l-[var(--accent)]">
+                    <ul className="flex flex-col gap-2">
                       {inspection.evidence.map((ev, i) => (
-                        <li key={i} className="rm-value text-xs text-white/50 flex gap-2">
-                          <span className="text-red-500/50 font-bold shrink-0">{i + 1}.</span>
+                        <li key={i} className="rm-value text-xs text-[var(--text2)] flex gap-2">
+                          <span className="text-[var(--accent2)] font-bold shrink-0">{i + 1}.</span>
                           {ev}
                         </li>
                       ))}
@@ -211,11 +208,11 @@ export function InspectionReport({ inspection, ret, originalSrc, returnedSrc }: 
                       { label: 'Original Packing Photo', src: originalSrc },
                       { label: 'Returned Product Photo', src: returnedSrc },
                     ].map(({ label, src }) => (
-                      <div key={label} className="rm-card rounded-xl bg-white/[0.04] p-3 border border-white/5">
-                        <p className="rm-label text-[9px] font-bold uppercase tracking-widest text-white/25 mb-2">{label}</p>
+                      <div key={label} className="rm-card rounded-lg bg-[var(--bg3)] p-3 border border-[var(--border)]">
+                        <p className="rm-label text-[10px] font-bold uppercase tracking-wider text-[var(--text3)] mb-2">{label}</p>
                         {src
-                          ? <img src={src} alt={label} className="w-full rounded-lg object-cover max-h-48" />
-                          : <div className="w-full h-24 rounded-lg bg-white/[0.03] flex items-center justify-center text-[10px] text-white/20 uppercase tracking-widest">No image</div>
+                          ? <img src={src} alt={label} className="w-full rounded-md object-cover max-h-48" />
+                          : <div className="w-full h-24 rounded-md bg-[var(--bg2)] flex items-center justify-center text-xs text-[var(--text3)]">No image</div>
                         }
                       </div>
                     ))}
@@ -231,9 +228,9 @@ export function InspectionReport({ inspection, ret, originalSrc, returnedSrc }: 
                   <Cell label="Decided By" value={inspection.decided_by ?? 'operator'} />
                   <Cell label="Decided At" value={fmt(inspection.decided_at)} />
                   {inspection.operator_note && (
-                    <div className="rm-card col-span-full rounded-xl bg-white/[0.04] p-4 border-l-2 border-white/10">
-                      <span className="rm-label text-[9px] font-bold uppercase tracking-widest text-white/25 block mb-1">Operator Note</span>
-                      <span className="rm-value text-sm text-white/50 italic">"{inspection.operator_note}"</span>
+                    <div className="rm-card col-span-full rounded-lg bg-[var(--bg3)] p-4 border border-[var(--border)] border-l-4 border-l-[var(--border2)]">
+                      <span className="rm-label text-[10px] font-bold uppercase tracking-wider text-[var(--text3)] block mb-1">Operator Note</span>
+                      <span className="rm-value text-sm text-[var(--text)] italic">"{inspection.operator_note}"</span>
                     </div>
                   )}
                 </>
@@ -245,7 +242,7 @@ export function InspectionReport({ inspection, ret, originalSrc, returnedSrc }: 
         {/* ── Download button — fixed bottom right ── */}
         <button
           onClick={() => window.print()}
-          className="rm-no-print fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white text-[10px] font-black uppercase tracking-widest px-5 py-3 rounded-full shadow-xl shadow-red-900/50 transition-all active:scale-95"
+          className="rm-no-print fixed bottom-6 right-6 z-50 btn-primary-rm shadow-xl py-3 px-6 rounded-full"
           aria-label="Download inspection report as PDF"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -257,3 +254,4 @@ export function InspectionReport({ inspection, ret, originalSrc, returnedSrc }: 
     </>
   )
 }
+

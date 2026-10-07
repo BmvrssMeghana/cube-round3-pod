@@ -11,7 +11,7 @@ export function ReturnsSection() {
   const [selectedReturn, setSelectedReturn] = useState<Return | null>(null)
   const [activeFilter, setActiveFilter] = useState<Filter>('total')
   const [stats, setStats] = useState<Stats>({ total: 0, completed: 0, failed: 0 })
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
 
   useEffect(() => {
     statsApi.get().then(setStats).catch(() => {})
@@ -35,46 +35,45 @@ export function ReturnsSection() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden relative">
+    <div className="flex flex-1 min-h-0 overflow-hidden relative bg-[var(--bg)] text-[var(--text)]">
 
       {/* ── Sidebar ── */}
       <aside
         className={`
-          shrink-0 border-r border-white/5 bg-black/50 backdrop-blur-sm
+          shrink-0 border-r border-[var(--border)] bg-[var(--bg2)]
           flex flex-col overflow-hidden
-          transition-all duration-300 ease-in-out
-          ${open ? 'w-56' : 'w-12'}
+          transition-all duration-300 ease-in-out z-20
+          ${open ? 'w-60' : 'w-14'}
         `}
       >
-        {/* Toggle button — 3 lines (hamburger) when closed, × when open */}
-        <button
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? 'Close sidebar' : 'Open sidebar'}
-          className="shrink-0 flex flex-col items-center justify-center gap-1.5 h-12 w-12 hover:bg-white/5 transition-colors"
-        >
-          {open ? (
-            /* × close icon */
-            <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            /* 3-line hamburger */
-            <>
-              <span className="block w-4 h-0.5 bg-white/50 rounded-full" />
-              <span className="block w-4 h-0.5 bg-white/50 rounded-full" />
-              <span className="block w-4 h-0.5 bg-white/50 rounded-full" />
-            </>
+        {/* Toggle button */}
+        <div className="flex items-center justify-between p-3 border-b border-[var(--border)] min-h-[52px]">
+          {open && (
+            <div className="px-2">
+              <span className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Navigation</span>
+            </div>
           )}
-        </button>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? 'Close sidebar' : 'Open sidebar'}
+            className="p-2 rounded-lg hover:bg-[var(--bg3)] text-[var(--text2)] transition-colors mx-auto"
+          >
+            {open ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
+        </div>
 
-        {/* Divider */}
-        <div className="h-px bg-white/5 mx-2" />
-
-        {/* Nav content — only visible when open */}
-        <div className={`flex flex-col flex-1 px-3 py-4 gap-1 overflow-hidden transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-
-          <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-4 mb-3">
-            Return Manager
+        {/* Nav content */}
+        <div className={`flex flex-col flex-1 px-3 py-4 gap-2 overflow-hidden transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text3)] px-3 mb-1">
+            Filter Returns
           </p>
 
           <ElasticSliderNav
@@ -82,29 +81,28 @@ export function ReturnsSection() {
             activeId={activeFilter}
             onChange={(id) => {
               setActiveFilter(id as Filter)
-              // keep sidebar open after selection
             }}
           />
 
-          <div className="mx-4 my-4 h-px bg-white/5" />
+          <div className="mx-3 my-4 h-px bg-[var(--border)]" />
 
-          <p className="text-[9px] text-white/15 uppercase tracking-widest px-4 leading-relaxed">
-            Select a filter to view the relevant return requests.
+          <p className="text-xs text-[var(--text3)] px-3 leading-relaxed">
+            Select a filter to inspect specific return categories.
           </p>
         </div>
 
-        {/* Collapsed state — show dots indicating active filter */}
+        {/* Collapsed state */}
         {!open && (
-          <div className="flex flex-col items-center gap-2 pt-4 px-2">
+          <div className="flex flex-col items-center gap-3 pt-4 px-2">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => { setActiveFilter(item.id as Filter); setOpen(true) }}
                 title={`${item.label}: ${item.value}`}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                className={`w-2.5 h-2.5 rounded-full transition-all ${
                   activeFilter === item.id
-                    ? item.accent === 'red' ? 'bg-red-500 scale-125' : 'bg-white scale-125'
-                    : 'bg-white/15 hover:bg-white/30'
+                    ? item.accent === 'red' ? 'bg-[var(--red)] scale-125' : 'bg-[var(--accent)] scale-125'
+                    : 'bg-[var(--border2)] hover:bg-[var(--text3)]'
                 }`}
               />
             ))}
@@ -123,3 +121,4 @@ export function ReturnsSection() {
     </div>
   )
 }
+

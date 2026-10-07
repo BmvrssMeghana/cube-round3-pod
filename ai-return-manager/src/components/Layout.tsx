@@ -8,16 +8,20 @@ interface LayoutProps {
 
 export function Layout({ children, title, subtitle }: LayoutProps) {
   return (
-    <main className="flex-1 min-h-0 overflow-auto">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-black uppercase tracking-widest text-white">{title}</h2>
-          {subtitle && (
-            <p className="mt-1 text-sm text-white/40 tracking-wide">{subtitle}</p>
-          )}
+    <div className="p-8 flex flex-col gap-6 max-w-[1600px] mx-auto w-full">
+      {(title || subtitle) && (
+        <div className="mb-4 pb-3 border-b border-[var(--border)]">
+          <h2 className="text-2xl font-bold tracking-tight text-[var(--text)]">{title}</h2>
+          {subtitle && <p className="text-xs text-[var(--text3)] mt-1 tracking-wide">{subtitle}</p>}
         </div>
+      )}
+
+      <div>
         {children}
       </div>
-    </main>
+    </div>
   )
 }
+
+
+

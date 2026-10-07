@@ -36,12 +36,12 @@ const PRINT_STYLES = `
     padding: 40px !important;
     background: #fff !important;
     color: #000 !important;
-    font-family: system-ui, sans-serif;
+    font-family: 'Manrope', system-ui, sans-serif;
   }
   .cr-title    { font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #000; }
   .cr-sub      { font-size: 11px; color: #666; margin-top: 4px; }
   .cr-section  { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 12px; }
-  .cr-sh       { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #cc0000; margin-bottom: 8px; }
+  .cr-sh       { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #4f46e5; margin-bottom: 8px; }
   .cr-grid     { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
   .cr-cell     { background: #f8f8f8; border: 1px solid #ddd; border-radius: 6px; padding: 10px; }
   .cr-cl       { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 0.1em; }
@@ -139,12 +139,10 @@ function DownloadReturnButton({ order }: { order: Order }) {
   async function handleDownload() {
     setLoading(true)
     try {
-      // Fetch return for this order
       const allReturns = await returnsApi.list()
       const found = allReturns.find((r) => r.order_id === order.id) ?? null
       setRet(found)
 
-      // Fetch inspection if return exists
       if (found) {
         const insp = await inspectionsApi.get(found.id).catch(() => null)
         setInspection(insp)
@@ -152,17 +150,14 @@ function DownloadReturnButton({ order }: { order: Order }) {
 
       setReady(true)
     } catch {
-      // still print even without inspection
       setReady(true)
     } finally {
       setLoading(false)
     }
   }
 
-  // Once data is loaded, trigger print
   useEffect(() => {
     if (!ready) return
-    // Show the hidden div, print, then hide it again
     const el = document.getElementById('customer-report')
     if (el) {
       el.style.display = 'block'
@@ -182,12 +177,12 @@ function DownloadReturnButton({ order }: { order: Order }) {
         onClick={handleDownload}
         disabled={loading}
         title="Download return receipt"
-        className="flex items-center gap-1.5 rounded-full border border-white/15 text-white/40 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 hover:border-white/30 hover:text-white/70 disabled:opacity-40 transition-all"
+        className="btn-secondary-rm"
       >
         {loading ? (
-          <span className="h-3 w-3 rounded-full border border-white/20 border-t-white/60 animate-spin" />
+          <span className="h-3 w-3 rounded-full border border-[var(--text3)] border-t-[var(--text)] animate-spin" />
         ) : (
-          <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <svg className="h-3.5 w-3.5 text-[var(--accent2)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
           </svg>
         )}
@@ -214,53 +209,60 @@ export function OrdersPage({ onRequestReturn }: OrdersPageProps) {
     <Layout title="My Orders" subtitle="View your orders and request a return.">
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
       {loading ? <Spinner /> : orders.length === 0 ? (
-        <p className="text-center text-white/20 py-16 text-xs uppercase tracking-widest">No orders yet.</p>
+        <div className="card-rm p-12 text-center text-[var(--text3)] text-sm font-medium">No orders yet.</div>
       ) : (
-        <div className="rounded-2xl card-red overflow-hidden">
-          {/* Table header */}
-          <div className="grid grid-cols-[2rem_1fr_1fr_auto_auto] gap-4 px-5 py-3 border-b border-white/10">
-            {['#', 'Product', 'Customer', 'Status', ''].map((h) => (
-              <span key={h} className="text-[10px] font-bold uppercase tracking-widest text-white/30">{h}</span>
-            ))}
+        <div className="card-rm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="bg-[var(--bg3)] border-b border-[var(--border)] text-[var(--text3)] text-[11px] font-bold uppercase tracking-wider">
+                  <th className="py-3 px-4">#</th>
+                  <th className="py-3 px-4">Product</th>
+                  <th className="py-3 px-4">Customer</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {orders.map((o, i) => (
+                  <tr key={o.id} className="hover:bg-[var(--bg3)] transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-xs text-[var(--accent2)]">#{i + 1}</td>
+                    <td className="py-3.5 px-4">
+                      <p className="font-semibold text-[var(--text)]">{o.product?.name ?? `#${o.product_id}`}</p>
+                      <p className="text-xs text-[var(--text3)]">{new Date(o.created_at).toLocaleDateString()}</p>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <p className="text-[var(--text2)] font-medium">{o.customer_name}</p>
+                      <p className="text-xs text-[var(--text3)]">{o.customer_email}</p>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <OrderStatusBadge status={o.status} />
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {hasReturn(o) ? (
+                          <>
+                            <span className="text-xs text-[var(--amber)] font-semibold italic mr-1">In progress</span>
+                            <DownloadReturnButton order={o} />
+                          </>
+                        ) : canReturn(o) ? (
+                          <button onClick={() => onRequestReturn(o)}
+                            className="btn-primary-rm">
+                            Return
+                          </button>
+                        ) : (
+                          <span className="text-xs text-[var(--text3)] italic">N/A</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          {orders.map((o, i) => (
-            <div key={o.id}
-              className="grid grid-cols-[2rem_1fr_1fr_auto_auto] gap-4 items-center px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.03] transition-colors">
-              <span className="text-sm font-black text-red-500">#{i + 1}</span>
-
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{o.product?.name ?? `#${o.product_id}`}</p>
-                <p className="text-xs text-white/30">{new Date(o.created_at).toLocaleDateString()}</p>
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-sm text-white/70 truncate">{o.customer_name}</p>
-                <p className="text-xs text-white/30 truncate">{o.customer_email}</p>
-              </div>
-
-              <OrderStatusBadge status={o.status} />
-
-              {/* Action column */}
-              <div className="flex items-center gap-2">
-                {hasReturn(o) ? (
-                  <>
-                    <span className="text-[10px] text-white/20 italic uppercase tracking-widest">In progress</span>
-                    <DownloadReturnButton order={o} />
-                  </>
-                ) : canReturn(o) ? (
-                  <button onClick={() => onRequestReturn(o)}
-                    className="rounded-full border border-red-500/40 text-red-400 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 hover:bg-red-500/10 transition-all">
-                    Return
-                  </button>
-                ) : (
-                  <span className="text-[10px] text-white/15 italic uppercase tracking-widest">N/A</span>
-                )}
-              </div>
-            </div>
-          ))}
         </div>
       )}
     </Layout>
   )
 }
+

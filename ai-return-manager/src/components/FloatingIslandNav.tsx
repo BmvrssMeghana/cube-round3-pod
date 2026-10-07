@@ -30,8 +30,8 @@ export function FloatingIslandNav({
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
       className={cn(
-        "relative bg-black/80 backdrop-blur-xl border border-white/10 text-white rounded-full transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex items-center justify-center shadow-xl shadow-black/40",
-        isOpen ? "w-auto px-2 py-2 h-12" : "w-4 h-4 p-0",
+        "relative bg-[var(--bg3)] backdrop-blur-xl border border-[var(--border2)] text-[var(--text)] rounded-full transition-all duration-300 ease-out overflow-hidden flex items-center justify-center shadow-lg",
+        isOpen ? "w-auto px-2 py-1.5 h-11" : "w-4 h-4 p-0",
         className
       )}
     >
@@ -42,7 +42,7 @@ export function FloatingIslandNav({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: 0.2 }}
             className="flex items-center gap-1 whitespace-nowrap"
           >
             {items.map((item) => {
@@ -52,10 +52,10 @@ export function FloatingIslandNav({
                   key={item.id}
                   onClick={() => onRoleChange(item.id)}
                   className={cn(
-                    "relative px-5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-200",
+                    "relative px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200",
                     isActive
-                      ? "bg-gradient-to-r from-red-800 to-red-600 text-white shadow-lg shadow-red-900/50"
-                      : "text-white/50 hover:text-white hover:bg-white/10"
+                      ? "bg-gradient-to-r from-[var(--accent)] to-[var(--accent2)] text-white shadow-md"
+                      : "text-[var(--text2)] hover:text-[var(--text)] hover:bg-[var(--bg2)]"
                   )}
                 >
                   {item.name}
@@ -70,7 +70,7 @@ export function FloatingIslandNav({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0 }}
             transition={{ duration: 0.2 }}
-            className="w-2 h-2 bg-gradient-to-r from-red-600 to-red-400 rounded-full"
+            className="w-2 h-2 bg-indigo-500 rounded-full"
           />
         )}
       </AnimatePresence>

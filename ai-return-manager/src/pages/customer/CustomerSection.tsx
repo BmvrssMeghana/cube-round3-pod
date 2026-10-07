@@ -21,13 +21,13 @@ export function CustomerSection() {
 
   return (
     <>
-      <div className="bg-black/70 backdrop-blur-md border-b border-white/10 px-6 py-2 flex gap-1">
+      <div className="bg-[var(--bg2)] border-b border-[var(--border)] px-6 py-3 flex gap-2">
         {(['products', 'orders'] as const).map((v) => (
           <button key={v} onClick={() => setView(v)}
-            className={`text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full transition-all ${
+            className={`text-xs font-semibold px-4 py-2 rounded-lg transition-all ${
               view === v
-                ? 'bg-white/10 text-white'
-                : 'text-white/30 hover:text-white/60 hover:bg-white/5'
+                ? 'bg-[var(--accent-glow)] text-[var(--accent2)] border border-[rgba(99,102,241,0.2)]'
+                : 'text-[var(--text2)] hover:text-[var(--text)] hover:bg-[var(--bg3)]'
             }`}>
             {v === 'products' ? 'Products' : 'My Orders'}
           </button>
@@ -38,3 +38,4 @@ export function CustomerSection() {
     </>
   )
 }
+

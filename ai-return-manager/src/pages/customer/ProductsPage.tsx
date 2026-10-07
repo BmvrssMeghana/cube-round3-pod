@@ -47,41 +47,41 @@ export function ProductsPage() {
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
 
       {success && (
-        <div className="mb-4 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400 flex items-center justify-between">
+        <div className="mb-6 rounded-lg border border-[rgba(13,148,136,0.3)] bg-[var(--green-bg)] px-4 py-3 text-sm text-[var(--green)] flex items-center justify-between font-medium">
           <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="text-green-400/50 hover:text-green-400 ml-3">×</button>
+          <button onClick={() => setSuccess(null)} className="text-[var(--green)] opacity-70 hover:opacity-100 ml-3">×</button>
         </div>
       )}
 
       {loading ? <Spinner /> : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => (
-            <div key={p.id} className="relative rounded-2xl overflow-hidden flex flex-col card-red glow-red group">
-              {/* Radial glow */}
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(180,0,0,0.3),transparent_70%)] pointer-events-none" />
-
+            <div key={p.id} className="card-rm card-rm-hover overflow-hidden flex flex-col group">
               {p.image_url && (
-                <div className="relative h-44 overflow-hidden">
-                  <img src={p.image_url} alt={p.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                <div className="relative h-44 overflow-hidden bg-[var(--bg3)]">
+                  <img src={p.image_url} alt={p.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                 </div>
               )}
 
-              <div className="relative z-10 p-4 flex flex-col flex-1 gap-2">
-                <h3 className="font-bold text-white uppercase tracking-wide text-sm">{p.name}</h3>
-                <p className="text-xs text-white/40 flex-1 leading-relaxed">{p.description}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-lg font-black text-white">${p.price.toFixed(2)}</span>
-                  <span className="text-[10px] text-white/30 uppercase tracking-widest">{p.stock} in stock</span>
+              <div className="p-5 flex flex-col flex-1 gap-3">
+                <div>
+                  <h3 className="font-bold text-[var(--text)] text-base">{p.name}</h3>
+                  <p className="text-xs text-[var(--text3)] mt-1 line-clamp-2 leading-relaxed">{p.description}</p>
                 </div>
+
+                <div className="flex items-center justify-between mt-auto pt-2 border-t border-[var(--border)]">
+                  <span className="text-xl font-extrabold text-[var(--text)]">${p.price.toFixed(2)}</span>
+                  <span className="text-xs font-semibold text-[var(--text3)]">{p.stock} in stock</span>
+                </div>
+
                 {p.stock > 0 ? (
                   <button onClick={() => { setOrdering(p); setSuccess(null) }}
-                    className="mt-2 w-full rounded-full bg-gradient-to-r from-red-800 to-red-600 text-white text-xs font-bold uppercase tracking-widest py-2.5 hover:from-red-700 hover:to-red-500 transition-all shadow-lg shadow-red-900/40">
+                    className="btn-primary-rm w-full">
                     Order Now
                   </button>
                 ) : (
-                  <button disabled className="mt-2 w-full rounded-full bg-white/5 text-white/20 text-xs font-bold uppercase tracking-widest py-2.5 cursor-not-allowed">
+                  <button disabled className="btn-secondary-rm w-full opacity-50 cursor-not-allowed">
                     Out of Stock
                   </button>
                 )}
@@ -93,50 +93,53 @@ export function ProductsPage() {
 
       {/* Order modal */}
       {ordering && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl card-red glow-red p-6 relative">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(180,0,0,0.25),transparent_70%)] rounded-2xl pointer-events-none" />
-            <div className="relative z-10">
-              <h3 className="text-lg font-black uppercase tracking-widest text-white mb-0.5">Place Order</h3>
-              <p className="text-xs text-white/40 mb-5 uppercase tracking-wide">{ordering.name}</p>
-
-              <form onSubmit={handleOrder} className="flex flex-col gap-3">
-                {[
-                  { label: 'Full Name', type: 'text', val: form.name, key: 'name', ph: 'Jane Smith' },
-                  { label: 'Email', type: 'email', val: form.email, key: 'email', ph: 'jane@example.com' },
-                ].map((f) => (
-                  <div key={f.key}>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">{f.label}</label>
-                    <input required type={f.type} value={f.val}
-                      onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                      placeholder={f.ph}
-                      className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-red-500/50 focus:bg-white/8 transition-colors" />
-                  </div>
-                ))}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">Quantity</label>
-                  <input required type="number" min={1} max={ordering.stock} value={form.qty}
-                    onChange={(e) => setForm({ ...form, qty: Number(e.target.value) })}
-                    className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/50 transition-colors" />
-                </div>
-
-                <ErrorMessage message={error} onDismiss={() => setError(null)} />
-
-                <div className="flex gap-2 mt-2">
-                  <button type="button" onClick={() => setOrdering(null)}
-                    className="flex-1 rounded-full border border-white/15 text-white/60 text-xs font-bold uppercase tracking-widest py-2.5 hover:border-white/30 hover:text-white transition-all">
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={submitting}
-                    className="flex-1 rounded-full bg-gradient-to-r from-red-800 to-red-600 text-white text-xs font-bold uppercase tracking-widest py-2.5 hover:from-red-700 hover:to-red-500 disabled:opacity-40 transition-all">
-                    {submitting ? 'Placing…' : 'Confirm'}
-                  </button>
-                </div>
-              </form>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md card-rm p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border)]">
+              <div>
+                <h3 className="text-lg font-bold text-[var(--text)]">Place Order</h3>
+                <p className="text-xs text-[var(--text3)]">{ordering.name}</p>
+              </div>
+              <button onClick={() => setOrdering(null)} className="text-[var(--text3)] hover:text-[var(--text)] text-lg">×</button>
             </div>
+
+            <form onSubmit={handleOrder} className="flex flex-col gap-4">
+              {[
+                { label: 'Full Name', type: 'text', val: form.name, key: 'name', ph: 'Jane Smith' },
+                { label: 'Email', type: 'email', val: form.email, key: 'email', ph: 'jane@example.com' },
+              ].map((f) => (
+                <div key={f.key}>
+                  <label className="block text-xs font-bold text-[var(--text2)] uppercase tracking-wider mb-1.5">{f.label}</label>
+                  <input required type={f.type} value={f.val}
+                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                    placeholder={f.ph}
+                    className="w-full rounded-lg bg-[var(--bg3)] border border-[var(--border2)] px-3.5 py-2.5 text-sm text-[var(--text)] placeholder-[var(--text3)] focus:outline-none focus:border-[var(--accent)] transition-colors" />
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-bold text-[var(--text2)] uppercase tracking-wider mb-1.5">Quantity</label>
+                <input required type="number" min={1} max={ordering.stock} value={form.qty}
+                  onChange={(e) => setForm({ ...form, qty: Number(e.target.value) })}
+                  className="w-full rounded-lg bg-[var(--bg3)] border border-[var(--border2)] px-3.5 py-2.5 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors" />
+              </div>
+
+              <ErrorMessage message={error} onDismiss={() => setError(null)} />
+
+              <div className="flex gap-3 mt-2">
+                <button type="button" onClick={() => setOrdering(null)}
+                  className="btn-secondary-rm flex-1">
+                  Cancel
+                </button>
+                <button type="submit" disabled={submitting}
+                  className="btn-primary-rm flex-1">
+                  {submitting ? 'Placing…' : 'Confirm'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
     </Layout>
   )
 }
+
