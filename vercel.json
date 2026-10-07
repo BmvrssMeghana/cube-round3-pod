@@ -1,0 +1,39 @@
+{
+  "framework": null,
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci --include=dev",
+  "outputDirectory": "apps/web/dist",
+  "env": {
+    "NODE_OPTIONS": "--max-old-space-size=4096"
+  },
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^/health$",
+      "dest": "/api/health",
+      "check": true
+    },
+    {
+      "src": "^/api/(.*)$",
+      "dest": "/api/[...path]?...path=$1",
+      "check": true
+    },
+    {
+      "src": "^/api(/.*)?$",
+      "status": 404
+    },
+    {
+      "handle": "error"
+    },
+    {
+      "status": 404,
+      "src": "^(?!/api).*$",
+      "dest": "/404.html"
+    },
+    {
+      "handle": "miss"
+    }
+  ]
+}

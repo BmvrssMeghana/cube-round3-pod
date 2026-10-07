@@ -1,159 +1,275 @@
-# GitHub Guide
+# How to use this repository
 
-Round 3 is a **Pod build**: five people, one repository. In Round 2 you worked alone in your own fork. This round is the opposite: you share one repo and have to work in it without breaking each other's work.
+This repo is the official starting point for **03 · Pack Manager**.
 
-```text
-Official starter  (Cube-Build-A-Thon/cube-round3-pod)
-        │  fork / copy
-        ▼
-Your Pod's fork   (one repository per Pod)   ◀── branches and PRs happen here
-        │
-        ▼
-Final submission = the tagged commit `round3-final` on main
+Round 2 is an **individual build**, and each participant works in their **own GitHub fork**. That keeps each participant's development and final submission separate.
+
+The workflow is:
+
+```text id="b9t9dl"
+Official Repository
+        ↓
+      Fork
+        ↓
+ Your GitHub Fork
+        ↓
+ Build + Test
+        ↓
+ Commit + Push
+        ↓
+ Final Submission
 ```
+
+**New here?** Read these first:
+
+1. [`README.md`](README.md) explains the Pack Manager problem, data and build expectations.
+2. [`RULES.md`](RULES.md) covers the repository and engineering rules.
+
+---
 
 ## 0. One-time setup
 
-You need `git`, Python 3.11+, and a GitHub account.
+You need `git` installed and a GitHub account.
 
-```sh
+Set your identity once, if you haven't before:
+
+```sh id="v7ed9l"
 git config --global user.name  "Your Name"
-git config --global user.email "you@example.com"     # the email on your GitHub account
-gh auth login                                        # or check SSH:  ssh -T git@github.com
+git config --global user.email "you@example.com"   # use the email on your GitHub account
 ```
 
-## 1. Fork the starter
+If you use SSH, check it works with:
 
-Each Pod works in **one fork of the official starter**: [`Cube-Build-A-Thon/cube-round3-pod`](https://github.com/Cube-Build-A-Thon/cube-round3-pod). Do this once, together:
-
-1. **One member** (agree who) forks the starter into their account, or uses **Use this template** on the starter's page for a copy (a template copy can be private; a fork of a public repo is public, so never put anything sensitive in it).
-2. **Add the other four members as collaborators with write access** (Settings → Collaborators).
-3. **Add the organisers as collaborators (read access is enough)** and send them the repository link, so your work can be assessed. The organisers will tell you which account to add.
-4. Everyone clones **that one repository**:
-
-```sh
-git clone git@github.com:<owner>/<your-pod-repo>.git        # SSH
-git clone https://github.com/<owner>/<your-pod-repo>.git    # or HTTPS
-cd <your-pod-repo>
-make setup && make test && make run      # everything should pass on the stubs before you change anything
+```sh id="5qf17z"
+ssh -T git@github.com
 ```
 
-**Do not work in five separate forks.** One shared repository, branches and pull requests inside it.
+If you'd rather use HTTPS, the easiest way to sign in is the GitHub CLI:
 
-In your first session, together, make one commit that fills in `pod.json` (everyone's GitHub handle and agent, and your orchestration coordinator) and `.github/CODEOWNERS`. **Specialist Pods** (no Prep Manager): set `"flow": "orchestration/flow.specialist.json"` and `"pod_type": "specialist"` in `pod.json`, and remove the Prep member.
-
-## 2. Who works where
-
-| Path | Who | Others may |
-|---|---|---|
-| `agents/receiving/` | Member 1 | Review. Change only with the owner's OK. |
-| `agents/prep/` | Member 2 (unused in Specialist Pods) | same |
-| `agents/pack/` | Member 3 | same |
-| `agents/returns/` | Member 4 | same |
-| `agents/recovery/` | Member 5 | same |
-| `orchestration/`, `shared/`, `tests/e2e/`, `data/input/` | **The Pod, together** | Anyone may propose; **discuss before merging** |
-| `docs/`, top-level `*.md` | Everyone | Edit your own sections |
-
-If everyone stays in their own folder, most merge conflicts never happen. The shared files are where conflicts come from, so keep changes there small and frequent.
-
-## 3. Branches
-
-One branch per area, short-lived:
-
-```text
-feature/receiving      feature/prep      feature/pack      feature/returns      feature/recovery
-feature/orchestrator   (and feature/<area>-<topic> for a second piece of work, e.g. feature/orchestrator-resume)
+```sh id="w7h3f5"
+gh auth login
 ```
 
-- **`main` is always runnable.** Never push straight to `main` once the Pod has started.
-- Commit small and often, with messages that say what and why:
+---
 
-```text
-Good                                          Avoid
-Map Receiving output to Agent Output          update
-Block workflow on UNCERTAIN prep (D-004)      fix
-Add wrong-tenant e2e test                     final / final2
+## 1. Fork the repo
+
+Open the official repository:
+
+```text id="m9et4g"
+https://github.com/Cube-Build-A-Thon/cube-03-pack-manager
 ```
 
-- **Commit under your own name.** The history is how the organisers see who did what. Do not squash a teammate's work into your commit.
+Click **Fork** and create a copy under your own GitHub account.
 
-## 4. Pull requests
+Your fork is your Round 2 development and submission repository.
 
-```text
-Participant branch  ──▶  Pull Request  ──▶  Pod review  ──▶  Merge
+---
+
+## 2. Clone your fork
+
+Clone **your fork**, not the organiser repository.
+
+### SSH
+
+```sh id="f3e0j1"
+git clone git@github.com:<your-github-username>/cube-03-pack-manager.git
+cd cube-03-pack-manager
 ```
 
-```sh
-git checkout main && git pull
-git checkout -b feature/receiving
-# … work …
-make test                                  # before every push
-git add -A && git commit -m "Map Receiving output to Agent Output"
-git push -u origin feature/receiving
-gh pr create --fill                        # the PR template has a checklist
+### HTTPS
+
+```sh id="n40kq7"
+git clone https://github.com/<your-github-username>/cube-03-pack-manager.git
+cd cube-03-pack-manager
 ```
 
-1. **Every PR is reviewed by someone else.** Reviewing is part of *Team collaboration* in the [rubric](ROUND3-RUBRIC.md).
-2. **CI must be green** (it runs `pytest` and a secret check). Do not merge red; do not delete a failing test to make it green.
-3. Squash-merge into `main`, then delete the branch. Keep PRs small: if a review takes more than 15 minutes, split it.
-4. A PR that records a design choice also adds a `docs/decisions.md` entry.
+Replace `<your-github-username>` with your GitHub username.
 
-### Shared-file changes
+---
 
-Changes to **shared schemas, contracts, orchestration or common utilities** (`shared/`, `orchestration/`) affect every agent. **Discuss them as a Pod before merging** (a message in your channel is enough, a PR comment thread is better), and have at least one other member from a *different* agent review them. The contract envelope itself is organiser-owned: add to `payload`, or open a `contract` issue ([`EVIDENCE-CONTRACT.md`](EVIDENCE-CONTRACT.md) section 11).
+## 3. Start building
 
-> Free private repos cannot enforce required reviews, so all of this is a **convention**. It is still assessed through the PR history. Do not bypass it.
+You do **not** need to create a participant folder or a participant branch in the organiser repository.
 
-## 5. Conflict resolution
+Build your Pack Manager directly inside your own fork.
 
-```text
-Pull latest main  →  Resolve conflicts locally  →  Run tests  →  Push updated branch  →  Request review
+You may organise your application however you prefer.
+
+A simple development flow is:
+
+```text id="u6a3qk"
+Understand
+    ↓
+Build
+    ↓
+Test
+    ↓
+Evaluate
+    ↓
+Document
+    ↓
+Demo / Deploy
+    ↓
+Submit
 ```
 
-```sh
-git fetch origin
-git rebase origin/main          # or: git merge origin/main (use one consistently within the Pod)
-# on a conflict:  open the file, find <<<<<<<  =======  >>>>>>>, keep what is right (often BOTH), remove the markers
-make test                       # the merge must still pass
-git add <files> && git rebase --continue
-git push --force-with-lease     # only on YOUR OWN branch after a rebase. Never force-push main.
+See [`README.md`](README.md) for the Pack Manager requirements.
+
+---
+
+## 4. Commit and push, often
+
+Commit your work regularly.
+
+For example:
+
+```sh id="b2v0cg"
+git status
+git add .
+git commit -m "Implement pack verification"
+git push origin main
 ```
 
-| Conflict in | What to do |
-|---|---|
-| Your own `agents/<name>/` | You are the owner: resolve it. |
-| Someone else's `agents/<name>/` | You should not be there. Talk to the owner. |
-| `docs/build-log.md`, `docs/decisions.md` | Keep **both** sides; reorder. |
-| `shared/schemas/*`, `orchestration/*` | Stop. This is a contract or design conflict, not a text conflict. Discuss as a Pod. |
-| `data/sample/*`, `data/expected/*` | Do not modify the organisers' data. Put yours in `data/input/`. |
+You may also create your own development branches inside your fork if you prefer:
 
-Stuck? `git rebase --abort` (or `git merge --abort`) puts you back where you started, with nothing lost.
-
-## 6. Final repository requirements
-
-```text
-[ ] main passes CI and `make test` on a clean clone
-[ ] Tag `round3-final` on the exact commit you submit      git tag round3-final && git push origin round3-final
-[ ] README.md accurate for YOUR Pod (run steps, env vars, links to demo and deployment)
-[ ] ARCHITECTURE.md describes your system; docs/decisions.md and docs/build-log.md up to date
-[ ] .env.example complete; NO secrets in the repo or its history
-[ ] Each member's work visible in the history under their own account
-[ ] No large binaries or datasets; no real customer data; no force-pushes to main
+```sh id="d57xkn"
+git checkout -b feature/pack-verification
 ```
 
-**No code commits after the deadline.** See [`RULES.md`](RULES.md).
+After the first push, `git push` is enough when your upstream branch is configured.
 
-## 7. Common problems
+Use meaningful commit messages, for example:
 
-| Symptom | Fix |
-|---|---|
-| `Repository not found` / `Permission denied` | Wrong GitHub account, or the repo owner has not added you as a collaborator. Ask the owner. |
-| `rejected … (fetch first)` | `git pull --rebase`, resolve, push. |
-| Passes locally, fails in CI | CI uses Python 3.12 and `requirements.txt`: add what you installed there. |
-| CI says "Committed env file" / "Possible secret" | Remove it, **revoke the credential immediately** (deleting the commit does not make it safe). |
-| I pushed to `main` by mistake | Do not force-push. Tell the Pod and `git revert <sha>` in a PR. |
-| The data or docs contradict each other | Open a `finding` issue. Do not silently edit the shared data. |
+```text id="m0e6qh"
+Implement order-line matching
+Add quantity verification
+Add extra-item detection
+Add SEAL and STOP_AND_FIX decisions
+Add uncertainty handling
+Add evaluation metrics
+```
 
-## Never commit secrets
+Avoid unclear messages such as:
 
-API keys, tokens, passwords, `.env` files, private credentials, real customer data. Use environment variables ([`.env.example`](.env.example)). If one slips into a commit, **revoke it first**, then clean up.
+```text id="a6fd9c"
+update
+changes
+final
+final2
+fix
+```
+
+### Build-phase commit rule
+
+All code commits forming your Round 2 submission must be made during the **authorised build phase**.
+
+Round 2 build begins:
+
+**25 September 2026 · 9:00 AM IST**
+
+Once the build phase ends, do not continue making Round 2 code changes.
+
+---
+
+## 5. Keep your fork clean
+
+Your final fork should contain the complete Pack Manager implementation and the documentation required for submission.
+
+You are responsible for your own:
+
+* code,
+* tests,
+* evaluation,
+* documentation,
+* deployment,
+* and final repository.
+
+Do not modify or interfere with the organiser's official repository or another participant's work.
+
+---
+
+## 6. What happens next
+
+There is no PR-to-main workflow for your Round 2 submission.
+
+You build and push to **your own fork**.
+
+When the submission window opens, you submit the URL of your final fork through the official Cube Buildathon submission form.
+
+### Important dates
+
+* **Build starts:** 25 September 2026 · 9:00 AM IST
+* **Submissions open:** 27 September 2026
+* **Final submission deadline:** 1 October 2026 · 6:00 PM IST
+
+The submission form closes permanently at the deadline.
+
+**There is no resubmission.**
+
+---
+
+## 7. Asking for help, or reporting a problem
+
+* **Something in the shared data or docs is wrong or contradicts itself:** raise it with the organisers and identify it as a `finding`. Do not silently change the official repository.
+* **Access or permission problems:** check that you are signed in to the GitHub account that owns your fork, or contact an organiser.
+* **Questions about integration with the other Managers:** use the official Buildathon communication channels and evidence-contract guidance provided by the organisers.
+
+---
+
+## Common problems
+
+| Symptom                         | Fix                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `remote: Repository not found`  | Check that you cloned your own fork and that the repository URL is correct.                       |
+| `remote: Permission denied`     | Make sure you are authenticated to the GitHub account that owns your fork.                        |
+| Push rejected                   | Check your branch, run `git pull` if needed, resolve any conflicts, then push again.              |
+| `rejected ... (fetch first)`    | Run `git pull --rebase`, resolve any conflicts, then `git push`.                                  |
+| Merge conflict                  | Open the affected file, resolve the conflict, then `git add` and `git commit`.                    |
+| Environment not working         | Check the README setup instructions, dependencies and environment variables.                      |
+| Accidentally committed a secret | **Revoke the credential immediately**, then remove it from the repository history as appropriate. |
+
+---
+
+## Commands you'll use every day
+
+```sh id="3sc8b9"
+git status                              # what changed
+git add .                              # stage changes
+git commit -m "..."                    # commit changes
+git push                               # push to your fork
+git pull --rebase                      # update your local branch
+git log --oneline -10                  # recent history
+```
+
+If you use your own development branch:
+
+```sh id="9nc9pu"
+git checkout -b feature/my-change
+git push -u origin feature/my-change
+```
+
+---
+
+## Before you submit
+
+Make sure:
+
+```text id="ez5f0n"
+[ ] Working Pack Manager
+[ ] Working in my own GitHub fork
+[ ] Required code commits completed during the authorised build phase
+[ ] README.md complete
+[ ] RULES.md reviewed
+[ ] ARCHITECTURE.md complete
+[ ] Evaluation completed
+[ ] Demo ready
+[ ] Deployment URL verified, if applicable
+[ ] LinkedIn post published
+[ ] CodeQuesters tagged
+[ ] Sydon.AI tagged
+[ ] Submission links verified
+[ ] Ready before 1 October 2026 · 6:00 PM IST
+```
+
+**Cube Buildathon · 03 · Pack Manager**
