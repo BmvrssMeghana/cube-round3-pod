@@ -1,184 +1,125 @@
-# Cube Buildathon · 02 · Prep Manager
+# Cube Buildathon · Round 3 · Pod Integration Build
 
-**Commerce Context stream · Round 2 · Individual Build**
+**Commerce Context stream · Round 3 · Pod build**
 
-> Five agents, one unit, one record that follows it.
-> A physical product arrives, gets prepped, gets shipped, comes back. At every step a person makes a fast judgment that nobody records. **You build the agent that makes one of those judgments, and leaves proof.**
+> Five agents, one unit, one record that follows it. In Round 3 your Pod connects the five Round 2 agents into **one commerce system**.
 
-**New here? Read these first:**
+**New here? Read [`START-HERE.md`](START-HERE.md) first.** This README is the concise overview; the detailed rules live in the guides.
 
-1. [`GITHUB-GUIDE.md`](GITHUB-GUIDE.md) explains how to fork the repository, set it up, build and push your work.
-2. [`RULES.md`](RULES.md) covers the repository and engineering rules.
+## Objective
 
----
+Integrate the five independently built Round 2 agents into one connected, end-to-end commerce workflow, and show it working. **Integrate → Orchestrate → Test → Deploy → Demonstrate.** Not a rebuild.
 
-## Your problem statement: Prep Manager
-
-|                              |                                                                      |
-| ---------------------------- | -------------------------------------------------------------------- |
-| **Position in the chain**    | Step 2 of 5. Inbound to Amazon.                                      |
-| **Customer**                 | Prep center owner, or self-prepping seller                           |
-| **What gets recorded**       | Compliance proof                                                     |
-| **Who consumes your output** | Recovery Manager (disputed prep fees, lost or damaged inbound units) |
-
-A unit is prepped for inbound shipment to Amazon. If the prep is wrong, Amazon charges a defect fee, and it arrives six weeks later attached to a shipment nobody can remember. The prep center has a work order saying what they were supposed to do, and their word that they did it. That is not evidence, and a meaningful share of those fees may be for defects that did not exist when the unit left the building.
-
-**What the agent checks, from photographs of the prepped unit:**
-
-* Polybag present and correctly sealed
-* Suffocation warning present and legible, not obscured by the fold
-* FNSKU label flat, not on a seam, curve or edge
-* Original manufacturer barcode covered
-* Expiry date still legible after wrapping
-* Required handling marks: fragile, liquid, this way up
-
-> **Look the rules up.** Amazon publishes its prep requirements. Do not infer them from examples and do not let a model guess. In a compliance check backed by an evidence record, "we retrieved something similar" is not a defensible answer.
-
-> **The hard constraint.** This touches every unit, not one in five. A prep center works on $0.40 to $1.10 per unit. Your cost per check has to live inside that.
-
-### The chain you are part of
+## What the Pod builds
 
 ```text
- Supplier delivery      Inbound to Amazon     Outbound to buyer     Customer return        Money back
- ┌──────────────┐      ┌──────────────┐      ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
- │ 01 Receiving │ ───▶ │ 02 Prep      │ ───▶ │ 03 Pack      │ ───▶ │ 04 Returns   │      │ 05 Recovery  │
- │ condition on │      │ compliance   │      │ contents at  │      │ condition &  │      │ reads all    │
- │ arrival      │      │ proof        │      │ seal         │      │ disposition  │      │ four → claim │
- └──────┬───────┘      └──────┬───────┘      └──────┬───────┘      └──────┬───────┘      └──────▲───────┘
-        └─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┘
+Receiving → Prep → Pack → Returns → Recovery → Final Commerce Outcome
 ```
 
-The first four are the same machine: a camera, a model, and a decision bound to a record. What changes is the ruleset, the buyer and the moment. The fifth has no camera. It turns the other four's records into a claim.
+| Member | Agent | Folder |
+|---|---|---|
+| 1 | Receiving Manager | `agents/receiving/` |
+| 2 | Prep Manager | `agents/prep/` |
+| 3 | Pack Manager | `agents/pack/` |
+| 4 | Returns Manager | `agents/returns/` |
+| 5 | Recovery Manager | `agents/recovery/` |
 
-Your output has to be usable by another pod. That's deliberate, and it's scored.
+Each member owns one agent. The Pod jointly owns the orchestration, shared contracts, workflow state, integration, end-to-end testing, documentation, demo and submission. **No participant owns the final system alone.**
 
----
-
-## Reference data
-
-`data/` holds a **dummy** CSV for reference while you design and build. Its columns and meanings are listed in [`data/README.md`](data/README.md).
-
-**The data is synthetic.** The SKUs, ASINs, FNSKUs, orders, suppliers, operators and amounts are all invented. The requirement flags and fee amounts are **not** Amazon's real rules or fees. Engineering rule 5 applies: look the authoritative rule up. The `photo_refs` paths are placeholders, and no images ship with this repo. Your fixtures and eval set are yours to capture.
-
-All five buildathon repos share the same `unit_id` values (`UNIT-0001` … `UNIT-0100`). You can follow one unit from receiving through recovery, the same way the real records will be joined. In the sample, each unit takes one route: **FBA** (prep, then Amazon ships it and charges fees) or **merchant-fulfilled / 3PL** (the seller packs it). So a unit has a Prep record or a Pack record, never both.
-
----
-
-## How this works
-
-You have a defined problem statement, supporting domain information and an engineering repository to build from. Real products are built backwards from the customer and forwards through the evidence. Understand the customer and operational workflow before writing code, then build and measure whether the solution works.
-
-Every design decision should be testable. A wrong assumption caught early costs less than the same assumption discovered after implementation. You are assessed on that as much as on running software.
-
-### What you're given
-
-* This problem statement
-* A domain brief covering the real economics, fee structures and what a working day in a warehouse looks like *(shared by the organisers)*
-* The engineering rules in [`RULES.md`](RULES.md)
-* Repository data and supporting resources
-* One fully worked package for Returns Manager (customer letter, PR/FAQ, one-pager) as a reference for the standard expected. **Read it. Don't copy it.**
-
-### What you produce
-
-Build your solution in **your own GitHub fork**.
-
-Your final Round 2 submission should include:
-
-* A working Prep Manager
-* A `README.md` explaining your solution, setup, assumptions and limitations
-* An `ARCHITECTURE.md`
-* An eval report/results with numbers and named failure modes
-* A working demo/video
-* A deployment URL, where applicable
-* Your mandatory LinkedIn post URL
-
-## Build and submission flow
+## Architecture in one picture
 
 ```text
-Understand
-    ↓
-Build
-    ↓
-Test
-    ↓
-Evaluate
-    ↓
-Document
-    ↓
-Demo / Deploy
-    ↓
-Submit
+              ┌────────────────────────── Orchestrator (owns workflow state) ───────────────────────────┐
+ case ──────▶ │ route · pass previous evidence · validate · record evidence · retry · UNCERTAIN · outcome │ ──▶ Workflow State
+              └────┬─────────┬─────────┬─────────┬─────────┬────────────────────────────────────────────┘      + Final Outcome
+        Agent Input ▼         │         │         │         │  ▲ Agent Output (result + Evidence Record)
+              Receiving     Prep      Pack     Returns   Recovery     ← each: in-process handle()  OR  HTTP /health + /run
 ```
 
-Round 2 is an **individual build**.
+- **One contract.** Every agent takes an *Agent Input* and returns an *Agent Output* containing an *Evidence Record*: per-check verdicts (PASS / FAIL / **UNCERTAIN**), confidence, model/version, timestamps, hashes.
+- **One owner of state.** The orchestrator derives workflow status and the final outcome from the evidence chain. Agent outputs inform; they do not set state.
+- **Failures are recorded, never hidden,** and never become success.
 
-The official build phase begins on **25 September 2026 at 9:00 AM IST**.
+Details: [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`INTEGRATION-GUIDE.md`](INTEGRATION-GUIDE.md) · [`ORCHESTRATION-GUIDE.md`](ORCHESTRATION-GUIDE.md).
 
-Submissions open from **27 September 2026**.
+## Quick setup and how to run
 
-The final submission deadline is **1 October 2026 at 6:00 PM IST**.
+Requires Python 3.11+.
 
-The submission form closes permanently at the deadline. **There is no resubmission.**
+```sh
+make setup            # venv + dependencies + .env
+make test             # integration, end-to-end, failure, UNCERTAIN, override and HTTP tests
+make run              # all sample workflows end to end -> out/workflows/*.json and out/evidence/*.json
+make case UNIT=UNIT-0014 ORG=org_demo_alpha     # one workflow, in full
+make serve            # orchestrator API on :8100 (POST /workflows, GET /workflows/{id}, GET /health)
+```
 
-All code commits forming your Round 2 submission must be made during the authorised build phase. Do not continue making Round 2 code changes after the build phase ends.
+Out of the box everything runs on **organiser stub agents** replaying the synthetic Round 2 CSVs. **Replacing a stub with your real agent is your job.**
 
-## What we're being straight with you about
+Run an agent as its own service:
 
-* **The core assumption is untested.** Nobody knows yet whether vision models can identify products and verify prep requirements reliably across long-tail catalogues without per-SKU training. Finding out that it doesn't hold, and documenting that clearly, counts as a useful outcome.
-* **Nobody has spoken to a customer yet.** If you can get a real prep center or seller on a call, ask them to rank the five problems by urgency. Don't ask whether they'd buy what you're building.
-* **The background documents disagree in places.** A contradiction is a finding. Raise it as an Issue labelled `finding`.
+```sh
+.venv/bin/uvicorn agents.prep.app:app --port 8102
+curl localhost:8102/health          # then set "mode": "http" in agents/prep/agent.json
+```
 
----
+## Where participants put their agents
 
-## Evaluation
+`agents/<stage>/` (`app.py` exposes `handle()`; `agent.json` describes your agent). Shared areas need Pod-level coordination: `orchestration/`, `shared/`, `tests/`, `docs/`. See [`PARTICIPANT-GUIDE.md`](PARTICIPANT-GUIDE.md).
 
-Your Round 2 submission is evaluated out of **100 points**:
+## How the agents connect
 
-| Criterion                                    |  Points |
-| -------------------------------------------- | ------: |
-| Problem Understanding & Solution Relevance   |  **15** |
-| Agent Functionality & Decision Quality       |  **25** |
-| Evaluation, Accuracy & Uncertainty Handling  |  **25** |
-| Evidence, Traceability & Engineering Quality |  **20** |
-| UX, Demo & Documentation                     |  **15** |
-| **TOTAL**                                    | **100** |
+Through the orchestrator only. It sends each agent an Agent Input (subject, this stage's captures, **all previous evidence**, overrides), validates and stores the Agent Output's evidence, updates workflow state, and decides what runs next. See [`INTEGRATION-GUIDE.md`](INTEGRATION-GUIDE.md).
 
-For the vision-based portions of the Prep Manager, use an appropriate unseen/held-out evaluation set and report your methodology, results, false positives, false negatives, `UNCERTAIN` cases and failure modes.
+## Required environment variables
 
----
+Copy `.env.example` to `.env`. **Never commit `.env`.**
 
-## Evidence and decision traceability
+| Variable | Purpose | Default |
+|---|---|---|
+| `ORCH_MODE` | Force `inproc` or `http` for all agents | each `agent.json` |
+| `ORCH_FLOW` | Flow file for the API | the flow in `pod.json` |
+| `<STAGE>_URL` | Where an `http`-mode agent listens (`PREP_URL`, …) | `agent.json` `url` |
+| `OUT_DIR` | Where workflow state and evidence are written | `out` |
+| `DATA_DIR`, `INPUT_DIR` | Sample CSVs for the stubs; your per-stage captures | `data/sample`, `data/input` |
+| `LOG_LEVEL`, `LOG_FORMAT` | Logging | `WARNING`, `json` |
+| Model provider keys | Whatever *your* agents use (e.g. `ANTHROPIC_API_KEY`) | none |
 
-Your Prep Manager should leave evidence behind for its decisions.
+## Example end-to-end workflow
 
-At minimum, the workflow should make it possible to understand:
+`UNIT-0014` (FBA, returned). Full files in [`examples/end-to-end/`](examples/end-to-end/).
 
 ```text
-What was being prepped?
-        ↓
-What requirements were checked?
-        ↓
-What did the agent observe?
-        ↓
-What verdict was produced?
-        ↓
-Why?
+Receiving  RCV-0014  accept          PASS   ─┐
+Prep       PRP-0014  compliant       PASS    │  every record is stored and handed forward as previous_evidence
+Pack       skipped (route = fba: Amazon packs it)
+Returns    RTN-0014  liquidate       PASS   ─┤
+Recovery   RCY-UNIT-0014  claim_recommended  FAIL ◀─┘
+             • inbound_defect_fee  $2.00  CONTRADICTS  <- cites PRP-0014 (Prep says compliant)
+             • weight-tier fee     $4.75  SILENT       <- no measured weight upstream; NOT claimed
+Workflow status COMPLETED · Final outcome CLAIM_RECOMMENDED ($2.00, evidence attached)
 ```
 
-Use the official evidence contract provided by the organisers as the baseline for interoperability with the other Managers.
+(The stubs' claim rules are illustrative; your Recovery agent decides for real.) Also see [`examples/happy-path/`](examples/happy-path/), [`examples/uncertain-path/`](examples/uncertain-path/), [`examples/failure-path/`](examples/failure-path/).
+
+## Repository structure
+
+```text
+START-HERE.md  README.md  PARTICIPANT-GUIDE.md  GITHUB-GUIDE.md  RULES.md  FAQ.md
+ARCHITECTURE.md  INTEGRATION-GUIDE.md  EVIDENCE-CONTRACT.md  ORCHESTRATION-GUIDE.md
+ROUND3-RUBRIC.md  SUBMISSION-GUIDE.md  DEMO-GUIDE.md  pod.json  .env.example
+agents/{receiving,prep,pack,returns,recovery}/   app.py · agent.json · README.md
+orchestration/       flow.json · orchestrator.py · rollup.py · store.py · clients.py · run.py (CLI) · api.py
+shared/schemas/      agent-input · agent-output · evidence · workflow-state · final-outcome · error
+shared/contracts/    agent-api.md        shared/utils/   hashing · schema validation · record builders · logging · server
+data/input/ (yours) · data/sample/ (Round 2 synthetic CSVs) · data/expected/ (golden outcomes for the stubs)
+examples/{happy-path,uncertain-path,failure-path,end-to-end}/      tests/{integration,e2e}/      docs/{build-log,decisions}.md
+```
+
+## Submission overview
+
+Your Pod's final repository (tagged), a working integrated system, documentation and architecture, a demo, a deployment URL if applicable, evaluation and testing evidence, and the LinkedIn post URL. The literal checklist, the process and the finality rules are in [`SUBMISSION-GUIDE.md`](SUBMISSION-GUIDE.md). Dates and the submission form are **TBA**.
 
 ---
 
-## PASS · FAIL · UNCERTAIN
-
-For individual checks:
-
-* **PASS** — the evidence supports the condition.
-* **FAIL** — the evidence shows the condition is not met.
-* **UNCERTAIN** — the evidence is insufficient for a reliable judgment.
-
-`UNCERTAIN` is not simply a low-confidence PASS.
-
----
-
-*CUBE Buildathon · Commerce Context*
+*CUBE Buildathon · Commerce Context · Round 3*
