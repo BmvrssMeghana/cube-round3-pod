@@ -29,23 +29,32 @@ def _unique_filename(original: str) -> str:
     return f"{uuid.uuid4().hex}{ext}"
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 async def save_packing_photo(file: UploadFile, order_id: int) -> str:
     """
     Upload the packing photo to Supabase Storage.
     Returns the public URL.
     """
-    filename = f"packing/order_{order_id}_{_unique_filename(file.filename or 'photo.jpg')}"
-    contents = await file.read()
+    try:
+        filename = f"packing/order_{order_id}_{_unique_filename(file.filename or 'photo.jpg')}"
+        contents = await file.read()
 
-    client = _get_client()
-    client.storage.from_(SUPABASE_BUCKET).upload(
-        path=filename,
-        file=contents,
-        file_options={"content-type": file.content_type or "image/jpeg", "upsert": "true"},
-    )
+        client = _get_client()
+        client.storage.from_(SUPABASE_BUCKET).upload(
+            path=filename,
+            file=contents,
+            file_options={"content-type": file.content_type or "image/jpeg", "upsert": "true"},
+        )
 
-    url = client.storage.from_(SUPABASE_BUCKET).get_public_url(filename)
-    return url
+        url = client.storage.from_(SUPABASE_BUCKET).get_public_url(filename)
+        return url
+    except Exception as exc:
+        logger.exception("Failed to upload packing photo for order_id=%s: %s", order_id, exc)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Storage upload failed: {exc}")
 
 
 async def save_return_photo(file: UploadFile, return_id: int) -> str:
@@ -53,18 +62,23 @@ async def save_return_photo(file: UploadFile, return_id: int) -> str:
     Upload the returned product photo to Supabase Storage.
     Returns the public URL.
     """
-    filename = f"returns/return_{return_id}_{_unique_filename(file.filename or 'photo.jpg')}"
-    contents = await file.read()
+    try:
+        filename = f"returns/return_{return_id}_{_unique_filename(file.filename or 'photo.jpg')}"
+        contents = await file.read()
 
-    client = _get_client()
-    client.storage.from_(SUPABASE_BUCKET).upload(
-        path=filename,
-        file=contents,
-        file_options={"content-type": file.content_type or "image/jpeg", "upsert": "true"},
-    )
+        client = _get_client()
+        client.storage.from_(SUPABASE_BUCKET).upload(
+            path=filename,
+            file=contents,
+            file_options={"content-type": file.content_type or "image/jpeg", "upsert": "true"},
+        )
 
-    url = client.storage.from_(SUPABASE_BUCKET).get_public_url(filename)
-    return url
+        url = client.storage.from_(SUPABASE_BUCKET).get_public_url(filename)
+        return url
+    except Exception as exc:
+        logger.exception("Failed to upload return photo for return_id=%s: %s", return_id, exc)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Storage upload failed: {exc}")
 
 
 def download_to_tempfile(url: str) -> str:
