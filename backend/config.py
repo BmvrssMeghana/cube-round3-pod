@@ -8,7 +8,12 @@ DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 # ── Supabase ──────────────────────────────────────────────────────────────────
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+SUPABASE_SERVICE_KEY = (
+    os.getenv("SUPABASE_SERVICE_KEY")
+    or os.getenv("SUPABASE_KEY")
+    or os.getenv("SUPABASE_ANON_KEY")
+    or ""
+)
 SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "return-manager")
 
 # ── AI ────────────────────────────────────────────────────────────────────────
