@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { RULE_REGISTRY } from '../data/rules';
 import { ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
 

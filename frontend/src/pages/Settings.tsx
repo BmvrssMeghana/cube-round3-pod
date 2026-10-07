@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Building, User, Shield, Database } from 'lucide-react';
+import { useState } from 'react';
+import { Building, Shield, Database } from 'lucide-react';
 
 interface SettingsProps {
   org: string;

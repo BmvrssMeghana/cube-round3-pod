@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { PRODUCTS, CATEGORY_RULES, getRulesForCategory } from '../data/rules';
+
+import { PRODUCTS, getRulesForCategory } from '../data/rules';
 import { store } from '../data/store';
 import { Package, PlusCircle } from 'lucide-react';
 
@@ -8,8 +8,7 @@ interface ProductsProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
 }
 
-export default function Products({ org, onNavigate }: ProductsProps) {
-  const [showAdd, setShowAdd] = useState(false);
+export default function Products({ org }: ProductsProps) {
   const products = PRODUCTS.filter(p => p.organization_id === org || org === 'org_demo_alpha');
   const inspections = store.getAll(org);
 
@@ -20,7 +19,7 @@ export default function Products({ org, onNavigate }: ProductsProps) {
           <h2>Products &amp; Rules</h2>
           <p>Product registry and applicable preparation rule mapping.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+        <button className="btn btn-primary" onClick={() => alert('Product add is coming in the next sprint.')}>
           <PlusCircle size={14} /> Add Product
         </button>
       </div>
@@ -86,7 +85,7 @@ export default function Products({ org, onNavigate }: ProductsProps) {
             <div className="empty-state-icon"><Package size={36} /></div>
             <h3>No products configured.</h3>
             <p>Add a product to start tracking prep compliance by SKU.</p>
-            <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+            <button className="btn btn-primary" onClick={() => alert('Product add is coming in the next sprint.')}>
               <PlusCircle size={14} /> Add Product
             </button>
           </div>
