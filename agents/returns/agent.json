@@ -1,10 +1,11 @@
 {
+  "agent_id": "returns-agent@v1.0",
   "stage": "returns",
-  "agent_id": "returns-stub@0",
-  "owner": "@github-handle-of-the-owner",
-  "mode": "inproc",
-  "url": "http://localhost:8104",
+  "owner": "prasad",
   "module": "agents.returns.app",
-  "implementation": "organiser-stub",
-  "notes": "Set mode to \"http\" if your agent is not Python or runs as its own service. Change implementation to a short honest description of what you built."
+  "url": "http://localhost:8104",
+  "version": "1.0.0",
+  "mode": "real",
+  "implementation": "real-engine",
+  "description": "Returns Manager AI Agent evaluating returned item SKU identity, parts completeness, Amazon condition grading, and disposition rules."
 }
