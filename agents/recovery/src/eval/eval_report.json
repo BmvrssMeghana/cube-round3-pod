@@ -1,0 +1,2097 @@
+{
+  "eval_summary": {
+    "total_charges_evaluated": 13,
+    "ground_truth_cases": 13,
+    "claims_recommended": 6,
+    "correctly_supported_claims": 6,
+    "incorrectly_recommended_claims": 0,
+    "missed_recoverable_claims": 0,
+    "uncertain_review_rate": 3,
+    "claim_precision": 1.0
+  },
+  "failure_modes": [],
+  "all_decisions": [
+    {
+      "line_id": "E-01",
+      "unit_id": "EVAL-U001",
+      "org_id": "org_demo_alpha",
+      "charge_type": "inbound_defect_fee",
+      "amount_usd": 2.5,
+      "verdict": "CONTRADICTED",
+      "claim_amount": 2.5,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Prep inspection logs confirm items were prepared fully in compliance with guidelines prior to intake.",
+      "supporting_evidence": [
+        "Polybag present sealed: Verified (yes)",
+        "Suffocation warning: Verified (legible)",
+        "Fnsku label placement: Verified (flat)"
+      ],
+      "cited_fields": [
+        {
+          "source": "prep",
+          "record_id": "EPRP-001",
+          "field": "polybag_present_sealed",
+          "value": "yes"
+        },
+        {
+          "source": "prep",
+          "record_id": "EPRP-001",
+          "field": "suffocation_warning",
+          "value": "legible"
+        },
+        {
+          "source": "prep",
+          "record_id": "EPRP-001",
+          "field": "fnsku_label_placement",
+          "value": "flat"
+        }
+      ],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-11-09",
+        "earliest_filing": "2026-09-10",
+        "days_remaining": 39,
+        "policy_note": "[V2-Current] Oct-2024 Policy: Shortened 60-day dispute window",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-01",
+        "charge_type": "inbound_defect_fee",
+        "amount_usd": 2.5,
+        "posted_date": "2026-09-10",
+        "resolved_unit_id": "EVAL-U001",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "prep",
+            "record_id": "EPRP-001",
+            "field": "polybag_present_sealed",
+            "value": "yes",
+            "timestamp": "2026-08-20T10:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-001",
+            "field": "suffocation_warning",
+            "value": "legible",
+            "timestamp": "2026-08-20T10:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-001",
+            "field": "fnsku_label_placement",
+            "value": "flat",
+            "timestamp": "2026-08-20T10:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-001",
+            "field": "original_barcode_covered",
+            "value": "yes",
+            "timestamp": "2026-08-20T10:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-001",
+            "field": "carton_damage",
+            "value": "none",
+            "timestamp": "2026-08-15T10:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-001",
+            "field": "unit_damage",
+            "value": "none",
+            "timestamp": "2026-08-15T10:00:00Z"
+          }
+        ],
+        "verdict": "CONTRADICTED"
+      },
+      "completeness_score": 0.46,
+      "missing_fields": [
+        "polybag_present",
+        "polybag_sealed",
+        "suffocation_warning_present",
+        "suffocation_warning_legible",
+        "fnsku_label_flat",
+        "fnsku_label_placement_valid",
+        "manufacturer_barcode_covered",
+        "expiry_date_legible",
+        "handling_marks_present"
+      ],
+      "claimability_score": 86,
+      "score_breakdown": {
+        "evidence_coverage": "11/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "MODERATE",
+      "priority_level": "NORMAL",
+      "adversarial_pass": true,
+      "adversarial_findings": [],
+      "why_not_claim": "",
+      "required_evidence_to_resolve": [],
+      "custody_window": {
+        "evidence_start": "2026-08-15T10:00:00Z",
+        "charge_posted": "2026-09-10",
+        "filing_deadline": "2026-11-09",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-01",
+            "type": "charge",
+            "label": "Fee Charge: inbound_defect_fee",
+            "amount": 2.5
+          },
+          {
+            "id": "unit-EVAL-U001",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U001"
+          },
+          {
+            "id": "prep-EPRP-001",
+            "type": "prep",
+            "label": "PREP (EPRP-001)",
+            "timestamp": "2026-08-20T10:00:00Z"
+          },
+          {
+            "id": "receiving-ERCV-001",
+            "type": "receiving",
+            "label": "RECEIVING (ERCV-001)",
+            "timestamp": "2026-08-15T10:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-01",
+            "to": "unit-EVAL-U001",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U001",
+            "to": "prep-EPRP-001",
+            "label": "verified_polybag_present_sealed"
+          },
+          {
+            "from": "unit-EVAL-U001",
+            "to": "receiving-ERCV-001",
+            "label": "verified_carton_damage"
+          }
+        ]
+      },
+      "sha256_hash": "68a48a6419c34a3cd9fee798e191941619c312a7e4bf9c12d7f8b949923ce5c8",
+      "root_cause_driver": "Packaging & Polybag Compliance",
+      "error": ""
+    },
+    {
+      "line_id": "E-02",
+      "unit_id": "EVAL-U002",
+      "org_id": "org_demo_alpha",
+      "charge_type": "inbound_defect_fee",
+      "amount_usd": 1.5,
+      "verdict": "SUPPORTED",
+      "claim_amount": 0.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Prep records show non-compliant prep work: fnsku_label_placement. Charge is legitimate.",
+      "supporting_evidence": [
+        "Fnsku label placement: on_seam"
+      ],
+      "cited_fields": [
+        {
+          "source": "prep",
+          "record_id": "EPRP-002",
+          "field": "fnsku_label_placement",
+          "value": "on_seam"
+        }
+      ],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-11-11",
+        "earliest_filing": "2026-09-12",
+        "days_remaining": 41,
+        "policy_note": "[V2-Current] Oct-2024 Policy: Shortened 60-day dispute window",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-02",
+        "charge_type": "inbound_defect_fee",
+        "amount_usd": 1.5,
+        "posted_date": "2026-09-12",
+        "resolved_unit_id": "EVAL-U002",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "prep",
+            "record_id": "EPRP-002",
+            "field": "polybag_present_sealed",
+            "value": "yes",
+            "timestamp": "2026-08-20T11:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-002",
+            "field": "suffocation_warning",
+            "value": "legible",
+            "timestamp": "2026-08-20T11:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-002",
+            "field": "fnsku_label_placement",
+            "value": "on_seam",
+            "timestamp": "2026-08-20T11:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-002",
+            "field": "original_barcode_covered",
+            "value": "yes",
+            "timestamp": "2026-08-20T11:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-002",
+            "field": "carton_damage",
+            "value": "none",
+            "timestamp": "2026-08-15T11:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-002",
+            "field": "unit_damage",
+            "value": "none",
+            "timestamp": "2026-08-15T11:00:00Z"
+          }
+        ],
+        "verdict": "SUPPORTED"
+      },
+      "completeness_score": 0.46,
+      "missing_fields": [
+        "polybag_present",
+        "polybag_sealed",
+        "suffocation_warning_present",
+        "suffocation_warning_legible",
+        "fnsku_label_flat",
+        "fnsku_label_placement_valid",
+        "manufacturer_barcode_covered",
+        "expiry_date_legible",
+        "handling_marks_present"
+      ],
+      "claimability_score": 65,
+      "score_breakdown": {
+        "evidence_coverage": "11/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "MODERATE",
+      "priority_level": "LOW",
+      "adversarial_pass": false,
+      "adversarial_findings": [],
+      "why_not_claim": "Charge is verified legitimate based on upstream operational logs showing non-compliant work or item damage.",
+      "required_evidence_to_resolve": [
+        "Revised operator compliance log",
+        "Audit override sign-off"
+      ],
+      "custody_window": {
+        "evidence_start": "2026-08-15T11:00:00Z",
+        "charge_posted": "2026-09-12",
+        "filing_deadline": "2026-11-11",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-02",
+            "type": "charge",
+            "label": "Fee Charge: inbound_defect_fee",
+            "amount": 1.5
+          },
+          {
+            "id": "unit-EVAL-U002",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U002"
+          },
+          {
+            "id": "prep-EPRP-002",
+            "type": "prep",
+            "label": "PREP (EPRP-002)",
+            "timestamp": "2026-08-20T11:00:00Z"
+          },
+          {
+            "id": "receiving-ERCV-002",
+            "type": "receiving",
+            "label": "RECEIVING (ERCV-002)",
+            "timestamp": "2026-08-15T11:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-02",
+            "to": "unit-EVAL-U002",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U002",
+            "to": "prep-EPRP-002",
+            "label": "verified_polybag_present_sealed"
+          },
+          {
+            "from": "unit-EVAL-U002",
+            "to": "receiving-ERCV-002",
+            "label": "verified_carton_damage"
+          }
+        ]
+      },
+      "sha256_hash": "ddb0518b6c91dee6afa2717d89e72900e4a8dbd1768989fb6af6be9afba9cdf8",
+      "root_cause_driver": "Packaging & Polybag Compliance",
+      "error": ""
+    },
+    {
+      "line_id": "E-03",
+      "unit_id": "EVAL-U003",
+      "org_id": "org_demo_alpha",
+      "charge_type": "lost_inbound",
+      "amount_usd": 0.0,
+      "verdict": "CONTRADICTED",
+      "claim_amount": 10.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Receiving intake records confirm all 6 ordered units arrived intact and fully accounted for. Inventory loss claim is disputable.",
+      "supporting_evidence": [
+        "Ordered Quantity: 6",
+        "Received Quantity: 6"
+      ],
+      "cited_fields": [
+        {
+          "source": "receiving",
+          "record_id": "ERCV-003",
+          "field": "qty_ordered",
+          "value": "6"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-003",
+          "field": "qty_received",
+          "value": "6"
+        }
+      ],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-10-31",
+        "earliest_filing": "2026-09-16",
+        "days_remaining": 30,
+        "policy_note": "[V2-Current] Oct-2024 Policy: Shortened 60-day window from inventory adjustment",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-03",
+        "charge_type": "lost_inbound",
+        "amount_usd": 0.0,
+        "posted_date": "2026-09-01",
+        "resolved_unit_id": "EVAL-U003",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "receiving",
+            "record_id": "ERCV-003",
+            "field": "qty_ordered",
+            "value": "6",
+            "timestamp": "2026-08-16T09:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-003",
+            "field": "qty_received",
+            "value": "6",
+            "timestamp": "2026-08-16T09:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-003",
+            "field": "identity_match",
+            "value": "yes",
+            "timestamp": "2026-08-16T09:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-003",
+            "field": "carton_damage",
+            "value": "none",
+            "timestamp": "2026-08-16T09:00:00Z"
+          }
+        ],
+        "verdict": "CONTRADICTED"
+      },
+      "completeness_score": 0.67,
+      "missing_fields": [
+        "quantity_matches_po",
+        "identity_matches_po"
+      ],
+      "claimability_score": 91,
+      "score_breakdown": {
+        "evidence_coverage": "16/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "MODERATE",
+      "priority_level": "NORMAL",
+      "adversarial_pass": true,
+      "adversarial_findings": [],
+      "why_not_claim": "",
+      "required_evidence_to_resolve": [],
+      "custody_window": {
+        "evidence_start": "2026-08-16T09:00:00Z",
+        "charge_posted": "2026-09-01",
+        "filing_deadline": "2026-10-31",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-03",
+            "type": "charge",
+            "label": "Fee Charge: lost_inbound",
+            "amount": 0.0
+          },
+          {
+            "id": "unit-EVAL-U003",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U003"
+          },
+          {
+            "id": "receiving-ERCV-003",
+            "type": "receiving",
+            "label": "RECEIVING (ERCV-003)",
+            "timestamp": "2026-08-16T09:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-03",
+            "to": "unit-EVAL-U003",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U003",
+            "to": "receiving-ERCV-003",
+            "label": "verified_qty_ordered"
+          }
+        ]
+      },
+      "sha256_hash": "a992447d58fe07ca01a49adc28eed77217d1aa3bc45a2aff7f267629dbd2f792",
+      "root_cause_driver": "Inbound Receiving Discrepancy",
+      "error": ""
+    },
+    {
+      "line_id": "E-04",
+      "unit_id": "EVAL-U004",
+      "org_id": "org_demo_alpha",
+      "charge_type": "lost_inbound",
+      "amount_usd": 0.0,
+      "verdict": "UNCERTAIN",
+      "claim_amount": 0.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Operational evidence exists but requires manual human review.",
+      "supporting_evidence": [],
+      "cited_fields": [],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-10-31",
+        "earliest_filing": "2026-09-16",
+        "days_remaining": 30,
+        "policy_note": "[V2-Current] Oct-2024 Policy: Shortened 60-day window from inventory adjustment",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-04",
+        "charge_type": "lost_inbound",
+        "amount_usd": 0.0,
+        "posted_date": "2026-09-01",
+        "resolved_unit_id": "EVAL-U004",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "receiving",
+            "record_id": "ERCV-004",
+            "field": "qty_ordered",
+            "value": "12",
+            "timestamp": "2026-08-16T10:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-004",
+            "field": "qty_received",
+            "value": "6",
+            "timestamp": "2026-08-16T10:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-004",
+            "field": "identity_match",
+            "value": "yes",
+            "timestamp": "2026-08-16T10:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-004",
+            "field": "carton_damage",
+            "value": "none",
+            "timestamp": "2026-08-16T10:00:00Z"
+          }
+        ],
+        "verdict": "UNCERTAIN"
+      },
+      "completeness_score": 0.67,
+      "missing_fields": [
+        "quantity_matches_po",
+        "identity_matches_po"
+      ],
+      "claimability_score": 65,
+      "score_breakdown": {
+        "evidence_coverage": "16/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "MODERATE",
+      "priority_level": "LOW",
+      "adversarial_pass": false,
+      "adversarial_findings": [],
+      "why_not_claim": "Evidence exists but exhibits data gaps or unverified measurement fields.",
+      "required_evidence_to_resolve": [
+        "Scale physical weight measurement log",
+        "Warehouse photo confirmation"
+      ],
+      "custody_window": {
+        "evidence_start": "2026-08-16T10:00:00Z",
+        "charge_posted": "2026-09-01",
+        "filing_deadline": "2026-10-31",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-04",
+            "type": "charge",
+            "label": "Fee Charge: lost_inbound",
+            "amount": 0.0
+          },
+          {
+            "id": "unit-EVAL-U004",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U004"
+          },
+          {
+            "id": "receiving-ERCV-004",
+            "type": "receiving",
+            "label": "RECEIVING (ERCV-004)",
+            "timestamp": "2026-08-16T10:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-04",
+            "to": "unit-EVAL-U004",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U004",
+            "to": "receiving-ERCV-004",
+            "label": "verified_qty_ordered"
+          }
+        ]
+      },
+      "sha256_hash": "ba962586a2b458da27dd467f6988509261f31f582604884048e876e1ffca0c9f",
+      "root_cause_driver": "Inbound Receiving Discrepancy",
+      "error": ""
+    },
+    {
+      "line_id": "E-05",
+      "unit_id": "EVAL-U005",
+      "org_id": "org_demo_alpha",
+      "charge_type": "refund_issued_item_not_returned",
+      "amount_usd": 0.0,
+      "verdict": "CONTRADICTED",
+      "claim_amount": 15.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Returns logs confirm unit was returned (Factory sealed and Restock), directly contradicting the 'item not returned' fee.",
+      "supporting_evidence": [
+        "Item Condition: Factory sealed",
+        "Inventory Status: Restock"
+      ],
+      "cited_fields": [
+        {
+          "source": "returns",
+          "record_id": "ERTN-005",
+          "field": "identity_match",
+          "value": "yes"
+        },
+        {
+          "source": "returns",
+          "record_id": "ERTN-005",
+          "field": "observed_state",
+          "value": "factory_sealed"
+        },
+        {
+          "source": "returns",
+          "record_id": "ERTN-005",
+          "field": "operator_disposition",
+          "value": "restock"
+        }
+      ],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-11-14",
+        "earliest_filing": "2026-09-15",
+        "days_remaining": 44,
+        "policy_note": "[V2-Current] Oct-2024 Policy: 45 min wait + 60 day window (105 days total from refund date)",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [
+        "\u26a0 No Receiving intake record on file for this unit"
+      ],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-05",
+        "charge_type": "refund_issued_item_not_returned",
+        "amount_usd": 0.0,
+        "posted_date": "2026-08-01",
+        "resolved_unit_id": "EVAL-U005",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "returns",
+            "record_id": "ERTN-005",
+            "field": "identity_match",
+            "value": "yes",
+            "timestamp": "2026-08-25T10:00:00Z"
+          },
+          {
+            "source": "returns",
+            "record_id": "ERTN-005",
+            "field": "observed_state",
+            "value": "factory_sealed",
+            "timestamp": "2026-08-25T10:00:00Z"
+          },
+          {
+            "source": "returns",
+            "record_id": "ERTN-005",
+            "field": "operator_disposition",
+            "value": "restock",
+            "timestamp": "2026-08-25T10:00:00Z"
+          }
+        ],
+        "verdict": "CONTRADICTED"
+      },
+      "completeness_score": 0.38,
+      "missing_fields": [
+        "identity_matches_order",
+        "completeness_verified",
+        "condition_grade",
+        "disposition_assigned",
+        "amazon_condition"
+      ],
+      "claimability_score": 84,
+      "score_breakdown": {
+        "evidence_coverage": "9/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "WEAK",
+      "priority_level": "NORMAL",
+      "adversarial_pass": true,
+      "adversarial_findings": [],
+      "why_not_claim": "",
+      "required_evidence_to_resolve": [],
+      "custody_window": {
+        "evidence_start": "2026-08-25T10:00:00Z",
+        "charge_posted": "2026-08-01",
+        "filing_deadline": "2026-11-14",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-05",
+            "type": "charge",
+            "label": "Fee Charge: refund_issued_item_not_returned",
+            "amount": 0.0
+          },
+          {
+            "id": "unit-EVAL-U005",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U005"
+          },
+          {
+            "id": "returns-ERTN-005",
+            "type": "returns",
+            "label": "RETURNS (ERTN-005)",
+            "timestamp": "2026-08-25T10:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-05",
+            "to": "unit-EVAL-U005",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U005",
+            "to": "returns-ERTN-005",
+            "label": "verified_identity_match"
+          }
+        ]
+      },
+      "sha256_hash": "81aa4b954750e4c07204b9da005e5a8f46dd63102992fd0191aa2ad1015e5cf7",
+      "root_cause_driver": "Customer Return Processing & Restock",
+      "error": ""
+    },
+    {
+      "line_id": "E-06",
+      "unit_id": "EVAL-U006",
+      "org_id": "org_demo_alpha",
+      "charge_type": "refund_issued_item_not_returned",
+      "amount_usd": 0.0,
+      "verdict": "SILENT",
+      "claim_amount": 0.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "No operational records found for this unit across receiving, prep, pack, or returns.",
+      "supporting_evidence": [],
+      "cited_fields": [],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-11-14",
+        "earliest_filing": "2026-09-15",
+        "days_remaining": 44,
+        "policy_note": "[V2-Current] Oct-2024 Policy: 45 min wait + 60 day window (105 days total from refund date)",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-06",
+        "charge_type": "refund_issued_item_not_returned",
+        "amount_usd": 0.0,
+        "posted_date": "2026-08-01",
+        "resolved_unit_id": "EVAL-U006",
+        "policy_version": "V2-Current",
+        "cited_records": [],
+        "verdict": "SILENT"
+      },
+      "completeness_score": 0.0,
+      "missing_fields": [
+        "identity_matches_order",
+        "completeness_verified",
+        "condition_grade",
+        "disposition_assigned",
+        "identity_match",
+        "observed_state",
+        "amazon_condition",
+        "operator_disposition"
+      ],
+      "claimability_score": 65,
+      "score_breakdown": {
+        "evidence_coverage": "0/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "WEAK",
+      "priority_level": "LOW",
+      "adversarial_pass": false,
+      "adversarial_findings": [],
+      "why_not_claim": "No matching upstream records found for this unit prior to the fee charge date.",
+      "required_evidence_to_resolve": [
+        "Receiving intake inspection log",
+        "Prep completion record",
+        "Pack timestamp report"
+      ],
+      "custody_window": {
+        "evidence_start": "2026-08-01",
+        "charge_posted": "2026-08-01",
+        "filing_deadline": "2026-11-14",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-06",
+            "type": "charge",
+            "label": "Fee Charge: refund_issued_item_not_returned",
+            "amount": 0.0
+          },
+          {
+            "id": "unit-EVAL-U006",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U006"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-06",
+            "to": "unit-EVAL-U006",
+            "label": "assigned_to"
+          }
+        ]
+      },
+      "sha256_hash": "7ab6455bde66cb38c1f6bab23d9041a213b86d79a1c2183290314b34166116cc",
+      "root_cause_driver": "Customer Return Processing & Restock",
+      "error": ""
+    },
+    {
+      "line_id": "E-07A",
+      "unit_id": "EVAL-U007",
+      "org_id": "org_demo_alpha",
+      "charge_type": "inbound_defect_fee",
+      "amount_usd": 3.0,
+      "verdict": "CONTRADICTED",
+      "claim_amount": 3.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Prep inspection logs confirm items were prepared fully in compliance with guidelines prior to intake.",
+      "supporting_evidence": [
+        "Fnsku label placement: Verified (flat)",
+        "Original barcode covered: Verified (yes)"
+      ],
+      "cited_fields": [
+        {
+          "source": "prep",
+          "record_id": "EPRP-007A",
+          "field": "fnsku_label_placement",
+          "value": "flat"
+        },
+        {
+          "source": "prep",
+          "record_id": "EPRP-007A",
+          "field": "original_barcode_covered",
+          "value": "yes"
+        }
+      ],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-11-14",
+        "earliest_filing": "2026-09-15",
+        "days_remaining": 44,
+        "policy_note": "[V2-Current] Oct-2024 Policy: Shortened 60-day dispute window",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [
+        "\u26a0 No Receiving intake record on file for this unit"
+      ],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-07A",
+        "charge_type": "inbound_defect_fee",
+        "amount_usd": 3.0,
+        "posted_date": "2026-09-15",
+        "resolved_unit_id": "EVAL-U007",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "prep",
+            "record_id": "EPRP-007A",
+            "field": "polybag_present_sealed",
+            "value": "not_required",
+            "timestamp": "2026-09-01T09:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-007A",
+            "field": "suffocation_warning",
+            "value": "not_required",
+            "timestamp": "2026-09-01T09:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-007A",
+            "field": "fnsku_label_placement",
+            "value": "flat",
+            "timestamp": "2026-09-01T09:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-007A",
+            "field": "original_barcode_covered",
+            "value": "yes",
+            "timestamp": "2026-09-01T09:00:00Z"
+          }
+        ],
+        "verdict": "CONTRADICTED"
+      },
+      "completeness_score": 0.31,
+      "missing_fields": [
+        "polybag_present",
+        "polybag_sealed",
+        "suffocation_warning_present",
+        "suffocation_warning_legible",
+        "fnsku_label_flat",
+        "fnsku_label_placement_valid",
+        "manufacturer_barcode_covered",
+        "expiry_date_legible",
+        "handling_marks_present"
+      ],
+      "claimability_score": 82,
+      "score_breakdown": {
+        "evidence_coverage": "7/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "WEAK",
+      "priority_level": "NORMAL",
+      "adversarial_pass": true,
+      "adversarial_findings": [],
+      "why_not_claim": "",
+      "required_evidence_to_resolve": [],
+      "custody_window": {
+        "evidence_start": "2026-09-01T09:00:00Z",
+        "charge_posted": "2026-09-15",
+        "filing_deadline": "2026-11-14",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-07A",
+            "type": "charge",
+            "label": "Fee Charge: inbound_defect_fee",
+            "amount": 3.0
+          },
+          {
+            "id": "unit-EVAL-U007",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U007"
+          },
+          {
+            "id": "prep-EPRP-007A",
+            "type": "prep",
+            "label": "PREP (EPRP-007A)",
+            "timestamp": "2026-09-01T09:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-07A",
+            "to": "unit-EVAL-U007",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U007",
+            "to": "prep-EPRP-007A",
+            "label": "verified_polybag_present_sealed"
+          }
+        ]
+      },
+      "sha256_hash": "d65a562f9d67d5323e62f86ab729323f8f43bc6f00c915ff80c31dfe71eefb19",
+      "root_cause_driver": "Packaging & Polybag Compliance",
+      "error": ""
+    },
+    {
+      "line_id": "E-07B",
+      "unit_id": "EVAL-U007",
+      "org_id": "org_demo_alpha",
+      "charge_type": "inbound_defect_fee",
+      "amount_usd": 3.0,
+      "verdict": "CONTRADICTED",
+      "claim_amount": 0.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Prep inspection logs confirm items were prepared fully in compliance with guidelines prior to intake.",
+      "supporting_evidence": [
+        "Fnsku label placement: Verified (flat)",
+        "Original barcode covered: Verified (yes)"
+      ],
+      "cited_fields": [
+        {
+          "source": "prep",
+          "record_id": "EPRP-007A",
+          "field": "fnsku_label_placement",
+          "value": "flat"
+        },
+        {
+          "source": "prep",
+          "record_id": "EPRP-007A",
+          "field": "original_barcode_covered",
+          "value": "yes"
+        }
+      ],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-11-17",
+        "earliest_filing": "2026-09-18",
+        "days_remaining": 47,
+        "policy_note": "[V2-Current] Oct-2024 Policy: Shortened 60-day dispute window",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": true,
+      "duplicate_note": "DUPLICATE_SUPPRESSED: Duplicate of earlier charge E-07A (same unit, charge type, amount $3.00 within 30 days)",
+      "defense_pass_notes": [
+        "\u26a0 No Receiving intake record on file for this unit"
+      ],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-07B",
+        "charge_type": "inbound_defect_fee",
+        "amount_usd": 3.0,
+        "posted_date": "2026-09-18",
+        "resolved_unit_id": "EVAL-U007",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "prep",
+            "record_id": "EPRP-007A",
+            "field": "polybag_present_sealed",
+            "value": "not_required",
+            "timestamp": "2026-09-01T09:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-007A",
+            "field": "suffocation_warning",
+            "value": "not_required",
+            "timestamp": "2026-09-01T09:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-007A",
+            "field": "fnsku_label_placement",
+            "value": "flat",
+            "timestamp": "2026-09-01T09:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-007A",
+            "field": "original_barcode_covered",
+            "value": "yes",
+            "timestamp": "2026-09-01T09:00:00Z"
+          }
+        ],
+        "verdict": "CONTRADICTED"
+      },
+      "completeness_score": 0.31,
+      "missing_fields": [
+        "polybag_present",
+        "polybag_sealed",
+        "suffocation_warning_present",
+        "suffocation_warning_legible",
+        "fnsku_label_flat",
+        "fnsku_label_placement_valid",
+        "manufacturer_barcode_covered",
+        "expiry_date_legible",
+        "handling_marks_present"
+      ],
+      "claimability_score": 72,
+      "score_breakdown": {
+        "evidence_coverage": "7/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "0/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "WEAK",
+      "priority_level": "NORMAL",
+      "adversarial_pass": false,
+      "adversarial_findings": [
+        "Duplicate charge fingerprint detected."
+      ],
+      "why_not_claim": "",
+      "required_evidence_to_resolve": [],
+      "custody_window": {
+        "evidence_start": "2026-09-01T09:00:00Z",
+        "charge_posted": "2026-09-18",
+        "filing_deadline": "2026-11-17",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-07B",
+            "type": "charge",
+            "label": "Fee Charge: inbound_defect_fee",
+            "amount": 3.0
+          },
+          {
+            "id": "unit-EVAL-U007",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U007"
+          },
+          {
+            "id": "prep-EPRP-007A",
+            "type": "prep",
+            "label": "PREP (EPRP-007A)",
+            "timestamp": "2026-09-01T09:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-07B",
+            "to": "unit-EVAL-U007",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U007",
+            "to": "prep-EPRP-007A",
+            "label": "verified_polybag_present_sealed"
+          }
+        ]
+      },
+      "sha256_hash": "631c05ea313bba60117525413f34ea3f59f14da06888b9e9822d00730147499b",
+      "root_cause_driver": "Packaging & Polybag Compliance",
+      "error": ""
+    },
+    {
+      "line_id": "E-08",
+      "unit_id": "EVAL-U008",
+      "org_id": "org_demo_alpha",
+      "charge_type": "inbound_defect_fee",
+      "amount_usd": 1.0,
+      "verdict": "UNCERTAIN",
+      "claim_amount": 0.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Prep inspection logs show unverified states for: polybag_present_sealed, suffocation_warning, fnsku_label_placement, original_barcode_covered. Further manual review required.",
+      "supporting_evidence": [
+        "Polybag present sealed: Uncertain",
+        "Suffocation warning: Uncertain",
+        "Fnsku label placement: Uncertain",
+        "Original barcode covered: Uncertain"
+      ],
+      "cited_fields": [],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-11-19",
+        "earliest_filing": "2026-09-20",
+        "days_remaining": 49,
+        "policy_note": "[V2-Current] Oct-2024 Policy: Shortened 60-day dispute window",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-08",
+        "charge_type": "inbound_defect_fee",
+        "amount_usd": 1.0,
+        "posted_date": "2026-09-20",
+        "resolved_unit_id": "EVAL-U008",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "prep",
+            "record_id": "EPRP-008",
+            "field": "polybag_present_sealed",
+            "value": "uncertain",
+            "timestamp": "2026-09-05T10:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-008",
+            "field": "suffocation_warning",
+            "value": "uncertain",
+            "timestamp": "2026-09-05T10:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-008",
+            "field": "fnsku_label_placement",
+            "value": "uncertain",
+            "timestamp": "2026-09-05T10:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-008",
+            "field": "original_barcode_covered",
+            "value": "uncertain",
+            "timestamp": "2026-09-05T10:00:00Z"
+          }
+        ],
+        "verdict": "UNCERTAIN"
+      },
+      "completeness_score": 0.31,
+      "missing_fields": [
+        "polybag_present",
+        "polybag_sealed",
+        "suffocation_warning_present",
+        "suffocation_warning_legible",
+        "fnsku_label_flat",
+        "fnsku_label_placement_valid",
+        "manufacturer_barcode_covered",
+        "expiry_date_legible",
+        "handling_marks_present"
+      ],
+      "claimability_score": 65,
+      "score_breakdown": {
+        "evidence_coverage": "7/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "WEAK",
+      "priority_level": "LOW",
+      "adversarial_pass": false,
+      "adversarial_findings": [],
+      "why_not_claim": "Evidence exists but exhibits data gaps or unverified measurement fields.",
+      "required_evidence_to_resolve": [
+        "Scale physical weight measurement log",
+        "Warehouse photo confirmation"
+      ],
+      "custody_window": {
+        "evidence_start": "2026-09-05T10:00:00Z",
+        "charge_posted": "2026-09-20",
+        "filing_deadline": "2026-11-19",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-08",
+            "type": "charge",
+            "label": "Fee Charge: inbound_defect_fee",
+            "amount": 1.0
+          },
+          {
+            "id": "unit-EVAL-U008",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U008"
+          },
+          {
+            "id": "prep-EPRP-008",
+            "type": "prep",
+            "label": "PREP (EPRP-008)",
+            "timestamp": "2026-09-05T10:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-08",
+            "to": "unit-EVAL-U008",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U008",
+            "to": "prep-EPRP-008",
+            "label": "verified_polybag_present_sealed"
+          }
+        ]
+      },
+      "sha256_hash": "7d4005fdca1fc95b0666ccd80cc30aaf9464aec8aa7578a3a3fe506f6ca92532",
+      "root_cause_driver": "Packaging & Polybag Compliance",
+      "error": ""
+    },
+    {
+      "line_id": "E-09",
+      "unit_id": "EVAL-U009",
+      "org_id": "org_demo_alpha",
+      "charge_type": "damaged_in_warehouse",
+      "amount_usd": 12.0,
+      "verdict": "SILENT",
+      "claim_amount": 0.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Operational evidence record postdates the fee charge date and cannot establish pre-charge condition.",
+      "supporting_evidence": [],
+      "cited_fields": [],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-11-04",
+        "earliest_filing": "2026-09-05",
+        "days_remaining": 34,
+        "policy_note": "[V2-Current] Oct-2024 Policy: 60-day window",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-09",
+        "charge_type": "damaged_in_warehouse",
+        "amount_usd": 12.0,
+        "posted_date": "2026-09-05",
+        "resolved_unit_id": "EVAL-U009",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "prep",
+            "record_id": "EPRP-008",
+            "field": "polybag_present_sealed",
+            "value": "uncertain",
+            "timestamp": "2026-09-05T10:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-010",
+            "field": "polybag_present_sealed",
+            "value": "not_required",
+            "timestamp": "2026-09-10T08:00:00Z"
+          }
+        ],
+        "verdict": "SILENT"
+      },
+      "completeness_score": 0.4,
+      "missing_fields": [
+        "carton_damage",
+        "unit_damage",
+        "unit_undamaged",
+        "quality_flags",
+        "identity_match"
+      ],
+      "claimability_score": 65,
+      "score_breakdown": {
+        "evidence_coverage": "10/25",
+        "rule_match": "20/20",
+        "timing_custody": "5/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "MODERATE",
+      "priority_level": "LOW",
+      "adversarial_pass": false,
+      "adversarial_findings": [],
+      "why_not_claim": "No matching upstream records found for this unit prior to the fee charge date.",
+      "required_evidence_to_resolve": [
+        "Receiving intake inspection log",
+        "Prep completion record",
+        "Pack timestamp report"
+      ],
+      "custody_window": {
+        "evidence_start": "2026-09-05T10:00:00Z",
+        "charge_posted": "2026-09-05",
+        "filing_deadline": "2026-11-04",
+        "precedes_charge": false,
+        "valid_custody": false
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-09",
+            "type": "charge",
+            "label": "Fee Charge: damaged_in_warehouse",
+            "amount": 12.0
+          },
+          {
+            "id": "unit-EVAL-U009",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U009"
+          },
+          {
+            "id": "prep-EPRP-008",
+            "type": "prep",
+            "label": "PREP (EPRP-008)",
+            "timestamp": "2026-09-05T10:00:00Z"
+          },
+          {
+            "id": "prep-EPRP-010",
+            "type": "prep",
+            "label": "PREP (EPRP-010)",
+            "timestamp": "2026-09-10T08:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-09",
+            "to": "unit-EVAL-U009",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U009",
+            "to": "prep-EPRP-008",
+            "label": "verified_polybag_present_sealed"
+          },
+          {
+            "from": "unit-EVAL-U009",
+            "to": "prep-EPRP-010",
+            "label": "verified_polybag_present_sealed"
+          }
+        ]
+      },
+      "sha256_hash": "83b632998dfc7378dfe28548c01314a245e6accf9975182d1495f3794edd12ab",
+      "root_cause_driver": "General Operational Dispute",
+      "error": ""
+    },
+    {
+      "line_id": "E-10",
+      "unit_id": "EVAL-U010",
+      "org_id": "org_demo_alpha",
+      "charge_type": "fulfilment_fee_weight_tier",
+      "amount_usd": 5.1,
+      "verdict": "UNCERTAIN",
+      "claim_amount": 0.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "SKU catalog specifications are verified, but physical scale weight measurement is absent from warehouse intake logs.",
+      "supporting_evidence": [
+        "Units per carton counted: 12",
+        "Spec variant: 1kg",
+        "Spec components: tub;scoop"
+      ],
+      "cited_fields": [
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "cartons_ordered",
+          "value": "1"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "cartons_received",
+          "value": "1"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "units_per_carton_ordered",
+          "value": "12"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "units_per_carton_counted",
+          "value": "12"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "spec_colour",
+          "value": "n/a"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "spec_variant",
+          "value": "1kg"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "spec_components",
+          "value": "tub;scoop"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "sku",
+          "value": "SKU-PROT-1KG"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "asin",
+          "value": "B0EVAL010"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-010",
+          "field": "product_title",
+          "value": "Whey Protein"
+        },
+        {
+          "source": "prep",
+          "record_id": "EPRP-010",
+          "field": "sku",
+          "value": "SKU-PROT-1KG"
+        },
+        {
+          "source": "prep",
+          "record_id": "EPRP-010",
+          "field": "fnsku",
+          "value": "X00EVAL010"
+        },
+        {
+          "source": "prep",
+          "record_id": "EPRP-010",
+          "field": "fba_shipment_id",
+          "value": "FBA-EVAL-3"
+        }
+      ],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-12-21",
+        "earliest_filing": "2026-09-22",
+        "days_remaining": 81,
+        "policy_note": "[V2-Current] Fee discrepancy dispute window: 90 days",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-10",
+        "charge_type": "fulfilment_fee_weight_tier",
+        "amount_usd": 5.1,
+        "posted_date": "2026-09-22",
+        "resolved_unit_id": "EVAL-U010",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "cartons_ordered",
+            "value": "1",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "cartons_received",
+            "value": "1",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "units_per_carton_ordered",
+            "value": "12",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "units_per_carton_counted",
+            "value": "12",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "spec_colour",
+            "value": "n/a",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "spec_variant",
+            "value": "1kg",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "spec_components",
+            "value": "tub;scoop",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "sku",
+            "value": "SKU-PROT-1KG",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "asin",
+            "value": "B0EVAL010",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-010",
+            "field": "product_title",
+            "value": "Whey Protein",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-010",
+            "field": "sku",
+            "value": "SKU-PROT-1KG",
+            "timestamp": "2026-09-10T08:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-010",
+            "field": "fnsku",
+            "value": "X00EVAL010",
+            "timestamp": "2026-09-10T08:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-010",
+            "field": "fba_shipment_id",
+            "value": "FBA-EVAL-3",
+            "timestamp": "2026-09-10T08:00:00Z"
+          }
+        ],
+        "verdict": "UNCERTAIN"
+      },
+      "completeness_score": 1.0,
+      "missing_fields": [
+        "quality_flags"
+      ],
+      "claimability_score": 65,
+      "score_breakdown": {
+        "evidence_coverage": "25/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "DIRECT",
+      "priority_level": "LOW",
+      "adversarial_pass": false,
+      "adversarial_findings": [],
+      "why_not_claim": "Evidence exists but exhibits data gaps or unverified measurement fields.",
+      "required_evidence_to_resolve": [
+        "Scale physical weight measurement log",
+        "Warehouse photo confirmation"
+      ],
+      "custody_window": {
+        "evidence_start": "2026-08-20T08:00:00Z",
+        "charge_posted": "2026-09-22",
+        "filing_deadline": "2026-12-21",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-10",
+            "type": "charge",
+            "label": "Fee Charge: fulfilment_fee_weight_tier",
+            "amount": 5.1
+          },
+          {
+            "id": "unit-EVAL-U010",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U010"
+          },
+          {
+            "id": "receiving-ERCV-010",
+            "type": "receiving",
+            "label": "RECEIVING (ERCV-010)",
+            "timestamp": "2026-08-20T08:00:00Z"
+          },
+          {
+            "id": "prep-EPRP-010",
+            "type": "prep",
+            "label": "PREP (EPRP-010)",
+            "timestamp": "2026-09-10T08:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-10",
+            "to": "unit-EVAL-U010",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U010",
+            "to": "receiving-ERCV-010",
+            "label": "verified_cartons_ordered"
+          },
+          {
+            "from": "unit-EVAL-U010",
+            "to": "prep-EPRP-010",
+            "label": "verified_sku"
+          }
+        ]
+      },
+      "sha256_hash": "0095e971548dd7c2feace224161759982cf85b3ed03d776e049c90fe08eddd86",
+      "root_cause_driver": "Catalog Dimension / Weight Tier Mismatch",
+      "error": ""
+    },
+    {
+      "line_id": "E-11",
+      "unit_id": "EVAL-U011",
+      "org_id": "org_demo_alpha",
+      "charge_type": "inbound_defect_fee",
+      "amount_usd": 2.0,
+      "verdict": "SILENT",
+      "claim_amount": 0.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Dispute filing window expired on 2026-07-31 under SLA policy V2-Current. Prep inspection logs confirm items were prepared fully in compliance with guidelines prior to intake.",
+      "supporting_evidence": [
+        "Polybag present sealed: Verified (yes)",
+        "Suffocation warning: Verified (legible)",
+        "Fnsku label placement: Verified (flat)"
+      ],
+      "cited_fields": [
+        {
+          "source": "prep",
+          "record_id": "EPRP-011",
+          "field": "polybag_present_sealed",
+          "value": "yes"
+        },
+        {
+          "source": "prep",
+          "record_id": "EPRP-011",
+          "field": "suffocation_warning",
+          "value": "legible"
+        },
+        {
+          "source": "prep",
+          "record_id": "EPRP-011",
+          "field": "fnsku_label_placement",
+          "value": "flat"
+        }
+      ],
+      "sla": {
+        "status": "expired",
+        "deadline": "2026-07-31",
+        "earliest_filing": "2026-06-01",
+        "days_remaining": -62,
+        "policy_note": "[V2-Current] Oct-2024 Policy: Shortened 60-day dispute window",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-11",
+        "charge_type": "inbound_defect_fee",
+        "amount_usd": 2.0,
+        "posted_date": "2026-06-01",
+        "resolved_unit_id": "EVAL-U011",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "prep",
+            "record_id": "EPRP-011",
+            "field": "polybag_present_sealed",
+            "value": "yes",
+            "timestamp": "2026-04-15T08:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-011",
+            "field": "suffocation_warning",
+            "value": "legible",
+            "timestamp": "2026-04-15T08:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-011",
+            "field": "fnsku_label_placement",
+            "value": "flat",
+            "timestamp": "2026-04-15T08:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-011",
+            "field": "original_barcode_covered",
+            "value": "yes",
+            "timestamp": "2026-04-15T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-011",
+            "field": "carton_damage",
+            "value": "none",
+            "timestamp": "2026-05-01T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-011",
+            "field": "unit_damage",
+            "value": "none",
+            "timestamp": "2026-05-01T08:00:00Z"
+          }
+        ],
+        "verdict": "SILENT"
+      },
+      "completeness_score": 0.46,
+      "missing_fields": [
+        "polybag_present",
+        "polybag_sealed",
+        "suffocation_warning_present",
+        "suffocation_warning_legible",
+        "fnsku_label_flat",
+        "fnsku_label_placement_valid",
+        "manufacturer_barcode_covered",
+        "expiry_date_legible",
+        "handling_marks_present"
+      ],
+      "claimability_score": 65,
+      "score_breakdown": {
+        "evidence_coverage": "11/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "0/10"
+      },
+      "evidence_strength": "MODERATE",
+      "priority_level": "LOW",
+      "adversarial_pass": false,
+      "adversarial_findings": [],
+      "why_not_claim": "No matching upstream records found for this unit prior to the fee charge date.",
+      "required_evidence_to_resolve": [
+        "Receiving intake inspection log",
+        "Prep completion record",
+        "Pack timestamp report"
+      ],
+      "custody_window": {
+        "evidence_start": "2026-04-15T08:00:00Z",
+        "charge_posted": "2026-06-01",
+        "filing_deadline": "2026-07-31",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-11",
+            "type": "charge",
+            "label": "Fee Charge: inbound_defect_fee",
+            "amount": 2.0
+          },
+          {
+            "id": "unit-EVAL-U011",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U011"
+          },
+          {
+            "id": "prep-EPRP-011",
+            "type": "prep",
+            "label": "PREP (EPRP-011)",
+            "timestamp": "2026-04-15T08:00:00Z"
+          },
+          {
+            "id": "receiving-ERCV-011",
+            "type": "receiving",
+            "label": "RECEIVING (ERCV-011)",
+            "timestamp": "2026-05-01T08:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-11",
+            "to": "unit-EVAL-U011",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U011",
+            "to": "prep-EPRP-011",
+            "label": "verified_polybag_present_sealed"
+          },
+          {
+            "from": "unit-EVAL-U011",
+            "to": "receiving-ERCV-011",
+            "label": "verified_carton_damage"
+          }
+        ]
+      },
+      "sha256_hash": "c75c59aca5a53d20ba7c9ddbc8c734e9239050df2d6b0d81bf3a0df9d69682a5",
+      "root_cause_driver": "Packaging & Polybag Compliance",
+      "error": ""
+    },
+    {
+      "line_id": "E-12",
+      "unit_id": "EVAL-U012",
+      "org_id": "org_demo_alpha",
+      "charge_type": "lost_inbound",
+      "amount_usd": 0.0,
+      "verdict": "CONTRADICTED",
+      "claim_amount": 10.0,
+      "already_reimbursed_amount": 0.0,
+      "reasoning": "Receiving intake records confirm all 24 ordered units arrived intact and fully accounted for. Inventory loss claim is disputable.",
+      "supporting_evidence": [
+        "Ordered Quantity: 24",
+        "Received Quantity: 24"
+      ],
+      "cited_fields": [
+        {
+          "source": "receiving",
+          "record_id": "ERCV-012",
+          "field": "qty_ordered",
+          "value": "24"
+        },
+        {
+          "source": "receiving",
+          "record_id": "ERCV-012",
+          "field": "qty_received",
+          "value": "24"
+        }
+      ],
+      "sla": {
+        "status": "open",
+        "deadline": "2026-11-09",
+        "earliest_filing": "2026-09-25",
+        "days_remaining": 39,
+        "policy_note": "[V2-Current] Oct-2024 Policy: Shortened 60-day window from inventory adjustment",
+        "policy_version": "V2-Current"
+      },
+      "duplicate_flag": false,
+      "duplicate_note": "",
+      "defense_pass_notes": [],
+      "hallucination_blocked": false,
+      "evidence_dna_tree": {
+        "charge_id": "E-12",
+        "charge_type": "lost_inbound",
+        "amount_usd": 0.0,
+        "posted_date": "2026-09-10",
+        "resolved_unit_id": "EVAL-U012",
+        "policy_version": "V2-Current",
+        "cited_records": [
+          {
+            "source": "receiving",
+            "record_id": "ERCV-012",
+            "field": "qty_ordered",
+            "value": "24",
+            "timestamp": "2026-08-25T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-012",
+            "field": "qty_received",
+            "value": "24",
+            "timestamp": "2026-08-25T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-012",
+            "field": "identity_match",
+            "value": "yes",
+            "timestamp": "2026-08-25T08:00:00Z"
+          },
+          {
+            "source": "receiving",
+            "record_id": "ERCV-012",
+            "field": "carton_damage",
+            "value": "none",
+            "timestamp": "2026-08-25T08:00:00Z"
+          },
+          {
+            "source": "prep",
+            "record_id": "EPRP-012",
+            "field": "fba_shipment_id",
+            "value": "FBA-EVAL-4",
+            "timestamp": "2026-08-20T08:00:00Z"
+          }
+        ],
+        "verdict": "CONTRADICTED"
+      },
+      "completeness_score": 0.83,
+      "missing_fields": [
+        "quantity_matches_po",
+        "identity_matches_po"
+      ],
+      "claimability_score": 95,
+      "score_breakdown": {
+        "evidence_coverage": "20/25",
+        "rule_match": "20/20",
+        "timing_custody": "20/20",
+        "entity_resolution": "15/15",
+        "duplicate_check": "10/10",
+        "sla_window": "10/10"
+      },
+      "evidence_strength": "DIRECT",
+      "priority_level": "NORMAL",
+      "adversarial_pass": true,
+      "adversarial_findings": [],
+      "why_not_claim": "",
+      "required_evidence_to_resolve": [],
+      "custody_window": {
+        "evidence_start": "2026-08-20T08:00:00Z",
+        "charge_posted": "2026-09-10",
+        "filing_deadline": "2026-11-09",
+        "precedes_charge": true,
+        "valid_custody": true
+      },
+      "evidence_graph": {
+        "nodes": [
+          {
+            "id": "charge-E-12",
+            "type": "charge",
+            "label": "Fee Charge: lost_inbound",
+            "amount": 0.0
+          },
+          {
+            "id": "unit-EVAL-U012",
+            "type": "unit",
+            "label": "Resolved Unit: EVAL-U012"
+          },
+          {
+            "id": "receiving-ERCV-012",
+            "type": "receiving",
+            "label": "RECEIVING (ERCV-012)",
+            "timestamp": "2026-08-25T08:00:00Z"
+          },
+          {
+            "id": "prep-EPRP-012",
+            "type": "prep",
+            "label": "PREP (EPRP-012)",
+            "timestamp": "2026-08-20T08:00:00Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "charge-E-12",
+            "to": "unit-EVAL-U012",
+            "label": "assigned_to"
+          },
+          {
+            "from": "unit-EVAL-U012",
+            "to": "receiving-ERCV-012",
+            "label": "verified_qty_ordered"
+          },
+          {
+            "from": "unit-EVAL-U012",
+            "to": "prep-EPRP-012",
+            "label": "verified_fba_shipment_id"
+          }
+        ]
+      },
+      "sha256_hash": "f9700e57cefeedf279f55c9d55cbc8dea77f7b4082267bcdf42e002fe9fb4fc2",
+      "root_cause_driver": "Inbound Receiving Discrepancy",
+      "error": ""
+    }
+  ]
+}
