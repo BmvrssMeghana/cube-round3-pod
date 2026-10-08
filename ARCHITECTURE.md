@@ -116,15 +116,84 @@ Every failure is **recorded and never becomes success**: a degraded evidence rec
 
 ---
 
-## Your Pod's architecture  ← **replace this section**
+## Your Pod's Architecture: EvidenceChain Operations Platform
 
-_Delete this note and describe **your** system. At minimum:_
+### 1. System Architecture Diagram
 
-1. **Diagram** of your actual components and flow, including anything you added.
-2. **What each agent really is**: model, rules, services, dependencies; which are still stubs.
-3. **Your orchestrator**: approach, how workflow state is stored, retries, how evidence is persisted, how overrides work (link the decisions in `docs/decisions.md`).
-4. **Your routing and final-outcome logic**, and how they treat uncertainty and weak evidence.
-5. **Tenancy**: where it is enforced, and how you tested it.
-6. **Failure model**: what you break in the demo and what happens.
-7. **Deployment**: where it runs, how to reach it, how to start it.
-8. **Known limits.**
+```text
+                                UNIFIED FRONTEND (React 18 / Vite / TypeScript)
+                                                │
+                                                ▼
+                                    UNIFIED BACKEND API (FastAPI)
+                                                │
+                                                ▼
+                                     CENTRAL ORCHESTRATOR
+                                                │
+    ┌───────────────────┬───────────────────┼───────────────────┬───────────────────┐
+    ▼                   ▼                   ▼                   ▼                   ▼
+Receiving Manager   Prep Manager        Pack Manager       Returns Manager     Recovery Manager
+  (Intake/PO)     (Packaging/Prep)    (Carton Pack)      (Return Grade)      (Financial Dispute)
+  [Gemini Vision] [Polybag/OCR Engine][Claude 3.5 Sonnet] [Gemini Vision]     [SLA/Evidence Matcher]
+    │                   │                   │                   │                   │
+    └───────────────────┴───────────────────┼───────────────────┴───────────────────┘
+                                                ▼
+                                    IMMUTABLE EVIDENCE STORE
+                                                │
+                                                ▼
+                                     CONTINUOUS UNIT PASSPORT
+```
+
+### 2. What Each Agent Really Is (No Stubs)
+
+- **Receiving Manager (`agents/receiving/src/`):** Real multimodal computer vision engine using Google Gemini / OpenAI. Performs PO quantity verification, SKU matching, variant check, carton/unit damage inspection, and component validation. Emits `RCV-<UnitID>` evidence records.
+- **Prep Manager (`agents/prep/src/`):** Real automated polybag sealing check, suffocation warning OCR verification, FNSKU label placement evaluation, barcode coverage audit, and physical scale dimension/weight measurement recorder. Emits `PRP-<UnitID>` evidence records.
+- **Pack Manager (`agents/pack/src/`):** Real Anthropic Claude 3.5 Sonnet vision engine with 2D bounding box detection algorithm `[ymin, xmin, ymax, xmax]`. Reconciles box contents against order manifests and emits `SEAL` (`PASS`), `STOP_AND_FIX` (`FAIL`), or `MANUAL_REVIEW` (`UNCERTAIN`). Emits `PCK-<UnitID>` evidence records.
+- **Returns Manager (`agents/returns/src/`):** Real multimodal LLM visual inspection evaluating returned item identity, component completeness, physical damage grading under Amazon published condition standards, and disposition assignment (`restock`, `refurbish`, `liquidate`, `dispose`). Emits `RTN-<UnitID>` evidence records.
+- **Recovery Manager (`agents/recovery/src/`):** Real deterministic SLA calculation engine and evidence lineage matcher. Cross-references fee charge reports against upstream evidence across Receiving, Prep, Pack, and Returns to generate claim recommendations with content SHA-256 hashes. Emits `RCY-<UnitID>` evidence records.
+
+### 3. Orchestrator Architecture
+
+- **State Management:** The Central Orchestrator owns all workflow state (`orchestration/store.py`). Workflow state is stored using `FileStore` (JSON files under `out/workflows/` and `out/evidence/`) with SQLite / PostgreSQL persistence models.
+- **Retries & Resilience:** Transient agent timeouts retry up to `retries` limit (configured in `orchestration/flow.json`). Refusals (HTTP 4xx) and invalid tenant requests do not retry and produce degraded error records.
+- **Overrides Mechanism:** Human verdict overrides append immutable entries to `overrides[]` in workflow state without mutating or deleting raw AI evidence records (`docs/decisions.md` ADR-03).
+- **Idempotency:** Request execution keys use `<workflow_id>:<stage>` to prevent duplicate execution.
+
+### 4. Routing & Final Outcome Logic
+
+- **Dynamic Flow Routing:** Evaluated via `orchestration/flow.json`. Prep runs for FBA orders (`route: ["fba"]`), Pack runs for Merchant-fulfilled orders (`route: ["mfn"]`), and Returns runs when `returned: true`.
+- **Outcome Rollup Rules (`orchestration/rollup.py`):**
+  - Any stage `FAIL` → `EXCEPTION` (or `CLAIM_RECOMMENDED` if Recovery contradicts a fee charge).
+  - Any stage `UNCERTAIN` with `needs_human: true` → workflow status `BLOCKED`, final outcome `NEEDS_REVIEW`.
+  - Incomplete required stage → `INCOMPLETE`.
+  - All required stages `PASS` → `CLEAN`.
+- **Weak Evidence & Uncertainty:** SILENT/UNCERTAIN charges in Recovery are never claimed to prevent seller standing degradation.
+
+### 5. Multi-Tenant Isolation
+
+- **Enforcement:** `org_id` is required on every request header, workflow state object, evidence record, and file path.
+- **Storage-Level Security:** File storage paths enforce strict org prefix isolation (`out/workflows/WF-<org_id>-...`). The orchestrator rejects evidence from mismatched tenants with a security event.
+- **Testing:** Verified via `tests/integration/test_workflow_state.py` using `org_demo_alpha` and `org_demo_bravo`.
+
+### 6. Failure Model
+
+- **Agent Failure Handling:** When an agent is stopped, times out, or errors out, the orchestrator records a degraded `pending`/`error` evidence record with `verdict: UNCERTAIN` and `needs_human: true`.
+- **System Outcome:** The workflow transitions to status `FAILED` with outcome `INCOMPLETE`. It never crashes the orchestrator and never reports false success.
+- **Recovery & Resume:** Once the agent service is restored, calling `POST /workflows/{id}/resume` retries the failed stage.
+
+### 7. Deployment
+
+- **Local Execution:**
+  ```bash
+  # Start unified FastAPI backend server
+  python -m uvicorn orchestration.api:app --host 0.0.0.0 --port 8100 --reload
+
+  # Start unified React Vite frontend SPA
+  cd frontend && npm run dev
+  ```
+- **Live URLs:** Frontend available at `http://localhost:5173`, Backend API at `http://localhost:8100`.
+
+### 8. Known Limits
+
+- **Image Capture References:** Media assets in sample data use mock relative paths; full image processing relies on local file references or uploaded base64 data.
+- **Rate Limits:** Cloud Vision API calls (Gemini/Claude) require valid API keys set in `.env`; fallback deterministic engines execute locally when offline.
+
