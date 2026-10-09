@@ -1,30 +1,41 @@
 import React from 'react';
-import { VerdictType } from '../types';
 
 interface StatusBadgeProps {
-  verdict: VerdictType | string | null | undefined;
+  verdict: string;
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ verdict }) => {
-  if (!verdict) return <span className="badge">N/A</span>;
+  const v = (verdict || '').toUpperCase();
 
-  const v = verdict.toUpperCase();
+  const config: Record<string, { bg: string; color: string; border: string; dot: string }> = {
+    PASS:        { bg: 'rgba(34,197,94,0.1)',   color: '#4ADE80', border: 'rgba(34,197,94,0.25)',    dot: '#22C55E' },
+    FAIL:        { bg: 'rgba(239,68,68,0.1)',   color: '#F87171', border: 'rgba(239,68,68,0.25)',    dot: '#EF4444' },
+    UNCERTAIN:   { bg: 'rgba(245,158,11,0.1)',  color: '#FCD34D', border: 'rgba(245,158,11,0.25)',   dot: '#F59E0B' },
+    HALTED:      { bg: 'rgba(239,68,68,0.1)',   color: '#F87171', border: 'rgba(239,68,68,0.25)',    dot: '#EF4444' },
+    DEGRADED:    { bg: 'rgba(245,158,11,0.1)',  color: '#FCD34D', border: 'rgba(245,158,11,0.25)',   dot: '#F59E0B' },
+    COMPLETED:   { bg: 'rgba(34,197,94,0.1)',   color: '#4ADE80', border: 'rgba(34,197,94,0.25)',    dot: '#22C55E' },
+    IN_PROGRESS: { bg: 'rgba(59,130,246,0.1)',  color: '#93C5FD', border: 'rgba(59,130,246,0.25)',   dot: '#3B82F6' },
+    PENDING:     { bg: 'rgba(100,116,139,0.12)', color: '#94A3B8', border: 'rgba(100,116,139,0.25)', dot: '#64748B' },
+    SKIPPED:     { bg: 'rgba(30,45,69,0.5)',    color: '#475569', border: 'rgba(30,45,69,0.8)',      dot: '#334155' },
+    COMPLETED_WITH_ISSUES: { bg: 'rgba(245,158,11,0.1)', color: '#FCD34D', border: 'rgba(245,158,11,0.25)', dot: '#F59E0B' },
+  };
 
-  if (v === 'PASS' || v === 'SEAL' || v === 'COMPLIANT' || v === 'ACCEPT' || v === 'SUPPORTED') {
-    return <span className="badge badge-pass">✓ {verdict}</span>;
-  }
+  const style = config[v] || config['PENDING'];
 
-  if (v === 'FAIL' || v === 'STOP_AND_FIX' || v === 'NON_COMPLIANT' || v === 'CONTRADICTED') {
-    return <span className="badge badge-fail">✕ {verdict}</span>;
-  }
-
-  if (v === 'UNCERTAIN' || v === 'MANUAL_REVIEW' || v === 'PENDING_REVIEW' || v === 'SILENT') {
-    return <span className="badge badge-uncertain">⚠ {verdict}</span>;
-  }
-
-  if (v === 'CLAIM_RECOMMENDED' || v === 'CLAIM') {
-    return <span className="badge badge-claim">₹ {verdict}</span>;
-  }
-
-  return <span className="badge">{verdict}</span>;
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 font-poppins font-semibold"
+      style={{
+        fontSize: 11,
+        background: style.bg,
+        color: style.color,
+        border: `1px solid ${style.border}`,
+        borderRadius: 20,
+        padding: '2px 8px',
+      }}
+    >
+      <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: style.dot }} />
+      {v}
+    </span>
+  );
 };

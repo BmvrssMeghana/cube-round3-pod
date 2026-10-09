@@ -27,6 +27,12 @@ class MemoryStore:
     def save_workflow(self, wf: dict) -> None:
         self.workflows[wf["workflow_id"]] = json.loads(json.dumps(wf))
 
+    def list_workflows(self, org_id: str | None = None) -> list[dict]:
+        items = self.workflows.values()
+        if org_id is not None:
+            items = (wf for wf in items if wf.get("org_id") == org_id)
+        return json.loads(json.dumps(list(items)))
+
     def get_evidence(self, record_id: str) -> dict | None:
         return self.evidence.get(record_id)
 
@@ -47,6 +53,15 @@ class FileStore(MemoryStore):
     def load_workflow(self, workflow_id: str) -> dict | None:
         p = self.root / "workflows" / f"{workflow_id}.json"
         return json.loads(p.read_text()) if p.exists() else None
+
+    def list_workflows(self, org_id: str | None = None) -> list[dict]:
+        workflows = [
+            json.loads(path.read_text())
+            for path in sorted((self.root / "workflows").glob("*.json"))
+        ]
+        if org_id is not None:
+            workflows = [wf for wf in workflows if wf.get("org_id") == org_id]
+        return workflows
 
     def save_workflow(self, wf: dict) -> None:
         p = self.root / "workflows" / f"{wf['workflow_id']}.json"

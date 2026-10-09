@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="web_dashboard" name="shell-type"/>
+<title>CUBE Operations Engine — Commerce Operations Command Center</title>
+<!-- Google Fonts: Space Grotesk, Syne, Plus Jakarta Sans, Inter, JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800;900&amp;family=Syne:wght@700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              yellow: '#FFE500',
+              yellowHover: '#EED600',
+              black: '#07080B',
+              surface: '#0D0F14',
+              card: '#12151D',
+              cardHigh: '#181D27',
+              cardHighest: '#202634',
+              border: 'rgba(255, 255, 255, 0.08)',
+              borderActive: 'rgba(255, 229, 0, 0.4)',
+              secondary: '#4EDEAA',
+              muted: '#7E8B9F',
+              cyan: '#38BDF8',
+              orange: '#FF7A45',
+              crimson: '#FF4D4F'
+            }
+          },
+          fontFamily: {
+            syne: ['Syne', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: #07080B;
+        color: #F8FAFC;
+      }
+      body {
+        overscroll-behavior: none;
+      }
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      display: block;
+      width: 4px;
+      height: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255,229,0,0.2);
+      border-radius: 4px;
+    }
+    .pill-btn {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pill-btn:hover {
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body class="bg-brand-black text-slate-100 font-sans antialiased selection:bg-brand-yellow selection:text-black">
+<!-- Top System Status Ticker (Kia Ora + EvidenceChain Hybrid) -->
+<div class="fixed top-0 left-0 right-0 z-50 bg-brand-yellow text-black font-mono text-[11px] font-bold py-1.5 px-4 flex items-center justify-between border-b border-black">
+<div class="flex items-center space-x-3 overflow-hidden text-ellipsis whitespace-nowrap">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-black text-[#FFE500] text-[10px] uppercase font-bold tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FFE500] mr-1.5 animate-ping"></span> LIVE SYNC
+      </span>
+<span class="tracking-tight uppercase">SYSTEM VERDICT: <strong class="font-black text-black">5/5 OPERATIONAL AGENTS ONLINE</strong></span>
+<span class="hidden md:inline text-black/80 font-medium">— AUTOMATED PHYSICAL AUDIT TRAIL SHA-256 SECURED</span>
+<span class="hidden xl:inline text-black/60">| BLOCK: 0x9e8a...7bf4e21a</span>
+</div>
+<div class="flex items-center space-x-4 text-[10px]">
+<span class="hidden sm:inline">LATENCY: <strong>14ms</strong></span>
+<span class="px-2 py-0.5 rounded bg-black/10 font-bold">NODE: US-EAST-EVID-01</span>
+<span class="hidden md:inline text-black/75">UTC 14:32:09</span>
+</div>
+</div>
+<div class="flex min-h-screen pt-8">
+<!-- Left CUBE Unified Sidebar -->
+<aside class="fixed left-0 top-8 bottom-0 w-64 bg-brand-surface border-r border-brand-border flex flex-col z-40">
+<!-- Brand Header -->
+<div class="h-16 px-4 flex items-center justify-between border-b border-brand-border bg-brand-surface/95 backdrop-blur-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-brand-yellow text-black flex items-center justify-center font-syne font-black text-base shadow-[0_0_15px_rgba(255,229,0,0.3)]">
+            C
+          </div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-syne font-extrabold text-lg tracking-tight text-white">CUBE</span>
+<span class="px-1.5 py-0.2 rounded bg-white/10 font-mono text-[9px] font-bold text-brand-yellow">v2.4</span>
+</div>
+<span class="font-mono text-[9px] uppercase tracking-wider text-brand-muted">Operations Engine</span>
+</div>
+</div>
+<div class="px-2 py-0.5 rounded bg-brand-card border border-brand-border">
+<span class="font-mono text-[10px] text-brand-yellow font-bold">alpha</span>
+</div>
+</div>
+<!-- Nav Items -->
+<div class="flex-1 overflow-y-auto px-3 py-4 space-y-5 custom-scrollbar">
+<!-- Command Center Group -->
+<div class="space-y-1">
+<div class="px-3 py-1">
+<span class="font-mono text-[10px] uppercase text-brand-muted tracking-wider font-semibold">Command Center</span>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-brand-yellow text-black font-semibold shadow-sm transition-all text-xs" href="#">
+<span class="material-symbols-outlined text-[18px]">dashboard</span>
+<span class="truncate">Operations Overview</span>
+<span class="ml-auto w-1.5 h-1.5 rounded-full bg-black"></span>
+</a>
+<a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-brand-card transition-colors text-xs" href="#">
+<span class="material-symbols-outlined text-[18px]">badge</span>
+<span class="truncate">Unit Passports</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-brand-card transition-colors text-xs" href="#">
+<div class="flex items-center gap-2.5 truncate">
+<span class="material-symbols-outlined text-[18px] text-brand-orange">warning</span>
+<span class="truncate">Review Queue</span>
+</div>
+<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-brand-orange/20 text-brand-orange font-bold">3</span>
+</a>
+</nav>
+</div>
+<!-- 5-Stage Agent Pipeline -->
+<div class="space-y-1">
+<div class="px-3 py-1 flex items-center justify-between">
+<span class="font-mono text-[10px] uppercase text-brand-muted tracking-wider font-semibold">5-Stage Pipeline</span>
+<span class="font-mono text-[9px] text-brand-secondary font-bold">ACTIVE</span>
+</div>
+<nav class="space-y-0.5 font-mono text-[11px]">
+<a class="flex items-center justify-between px-3 py-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-brand-card transition-colors" href="#">
+<span class="flex items-center gap-2"><span class="text-brand-yellow">01</span> Receiving</span>
+<span class="text-[9px] px-1 rounded bg-brand-card text-brand-secondary">PASS</span>
+</a>
+<a class="flex items-center justify-between px-3 py-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-brand-card transition-colors" href="#">
+<span class="flex items-center gap-2"><span class="text-brand-yellow">02</span> Prep (FBA)</span>
+<span class="text-[9px] px-1 rounded bg-brand-card text-brand-secondary">PASS</span>
+</a>
+<a class="flex items-center justify-between px-3 py-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-brand-card transition-colors" href="#">
+<span class="flex items-center gap-2"><span class="text-brand-yellow">03</span> Pack (MFN)</span>
+<span class="text-[9px] px-1 rounded bg-brand-card text-brand-secondary">SEAL</span>
+</a>
+<a class="flex items-center justify-between px-3 py-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-brand-card transition-colors" href="#">
+<span class="flex items-center gap-2"><span class="text-brand-orange">04</span> Returns</span>
+<span class="text-[9px] px-1 rounded bg-brand-orange/20 text-brand-orange">REV (1)</span>
+</a>
+<a class="flex items-center justify-between px-3 py-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-brand-card transition-colors" href="#">
+<span class="flex items-center gap-2"><span class="text-brand-yellow">05</span> Recovery</span>
+<span class="text-[9px] px-1 rounded bg-brand-yellow/20 text-brand-yellow font-bold">$1.6k</span>
+</a>
+</nav>
+</div>
+<!-- Analytical & Governance -->
+<div class="space-y-1">
+<div class="px-3 py-1">
+<span class="font-mono text-[10px] uppercase text-brand-muted tracking-wider font-semibold">Governance &amp; Ledger</span>
+</div>
+<nav class="space-y-1 text-xs">
+<a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-brand-card transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">query_stats</span>
+<span class="truncate">Claims &amp; Clawbacks</span>
+</a>
+<a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-brand-card transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">hub</span>
+<span class="truncate">Global Nodes Map</span>
+</a>
+<a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-brand-card transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+<span class="truncate">System Health</span>
+</a>
+</nav>
+</div>
+</div>
+<!-- Agent Heartbeat Footer Box -->
+<div class="p-3 border-t border-brand-border bg-brand-card/40">
+<div class="p-3 rounded-xl bg-brand-card border border-brand-border space-y-2">
+<div class="flex items-center justify-between">
+<span class="font-mono text-[10px] uppercase text-brand-muted font-bold tracking-wider">Autonomous Agents</span>
+<span class="flex h-2 w-2 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-brand-secondary"></span>
+</span>
+</div>
+<div class="text-[11px] font-mono text-neutral-300 flex justify-between items-center">
+<span>Mesh Status</span>
+<span class="text-brand-secondary font-bold">100% In Sync</span>
+</div>
+<div class="w-full bg-black h-1.5 rounded-full overflow-hidden">
+<div class="bg-brand-yellow h-full w-full rounded-full"></div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="pl-64 flex-1 min-w-0">
+<!-- Fixed Secondary Topbar -->
+<header class="sticky top-8 z-30 h-16 bg-brand-surface/90 backdrop-blur-xl border-b border-brand-border px-6 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-xs font-mono">
+<span class="text-brand-muted uppercase">Platform</span>
+<span class="text-neutral-600">/</span>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-card border border-brand-border text-white font-medium">
+<span class="w-2 h-2 rounded-full bg-brand-secondary"></span>
+<span>org_demo_alpha</span>
+<span class="material-symbols-outlined text-[14px] text-brand-muted">expand_more</span>
+</div>
+</div>
+<div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-brand-yellow/10 border border-brand-yellow/20">
+<span class="w-1.5 h-1.5 rounded-full bg-brand-yellow animate-pulse"></span>
+<span class="font-mono text-[11px] font-bold text-brand-yellow">EVIDENCE ENGINE v4.19 · PROD</span>
+</div>
+</div>
+<!-- Top Right Controls -->
+<div class="flex items-center gap-3">
+<!-- Salestics Search Bar -->
+<div class="relative hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-[16px] text-brand-muted">search</span>
+<input class="w-64 pl-8 pr-3 py-1.5 rounded-full bg-brand-card border border-brand-border text-xs text-white placeholder-brand-muted focus:outline-none focus:border-brand-yellow transition-all" placeholder="Search Unit ID, SKU, PO or Hash..." type="text"/>
+</div>
+<!-- Notification Bell -->
+<button class="relative p-2 rounded-full bg-brand-card border border-brand-border text-neutral-300 hover:text-white hover:border-neutral-500 transition-colors" title="Notifications">
+<span class="material-symbols-outlined text-[18px]">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-orange"></span>
+</button>
+<!-- Refresh / Sync Button -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-card border border-brand-border text-xs font-mono text-neutral-300 hover:text-white hover:border-brand-yellow transition-colors">
+<span class="material-symbols-outlined text-[16px] text-brand-yellow">sync</span>
+<span class="hidden sm:inline">Sync</span>
+</button>
+<!-- Canary Yellow CTA (Salestics / Kia Ora style pill) -->
+<button class="pill-btn flex items-center gap-1.5 px-5 py-2 rounded-full bg-brand-yellow text-black font-display font-extrabold text-xs uppercase tracking-wider hover:bg-white transition-all shadow-[0_0_20px_rgba(255,229,0,0.25)]" id="openModalBtn">
+<span class="material-symbols-outlined text-[18px] font-bold">add</span>
+<span>New Unit Workflow</span>
+</button>
+<!-- User Profile Avatar (from Salestics) -->
+<div class="flex items-center gap-2 pl-2 border-l border-brand-border">
+<div class="w-8 h-8 rounded-full bg-brand-yellow text-black font-syne font-bold flex items-center justify-center text-xs">
+              RW
+            </div>
+<div class="hidden xl:flex flex-col text-left">
+<span class="text-xs font-display font-bold text-white leading-tight">Rafael Williams</span>
+<span class="text-[10px] font-mono text-brand-muted leading-tight">Admin • Lead Auditor</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Dashboard Main Canvas -->
+<main class="p-6 lg:p-8 space-y-6 max-w-[1720px] mx-auto">
+<!-- 1. SALESTICS TOP KPI ROW (with growth pills + sparkline tags) -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-purpose="salestics-kpis">
+<!-- KPI 1: Total Units Inspected -->
+<div class="p-5 rounded-2xl bg-brand-card border border-brand-border hover:border-brand-borderActive transition-all relative overflow-hidden group">
+<div class="flex items-start justify-between">
+<span class="font-mono text-[11px] uppercase tracking-wider text-brand-muted font-semibold">Total Inspected Units</span>
+<span class="material-symbols-outlined text-brand-yellow text-[20px] p-1.5 rounded-xl bg-brand-yellow/10">inventory_2</span>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="text-3xl font-display font-black text-white tracking-tight">3,054</span>
+<span class="text-xs font-mono text-brand-muted">units</span>
+</div>
+<div class="mt-3 pt-3 border-t border-brand-border/60 flex items-center justify-between text-xs">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-secondary/10 text-brand-secondary font-mono text-[11px] font-bold">
+<span class="material-symbols-outlined text-[13px]">trending_up</span> +2.34%
+              </div>
+<span class="text-[11px] font-mono text-brand-muted">from last week</span>
+</div>
+</div>
+<!-- KPI 2: Total Claim Value Won / Capital Recovered -->
+<div class="p-5 rounded-2xl bg-brand-yellow text-black border border-black shadow-[0_4px_24px_rgba(255,229,0,0.15)] relative overflow-hidden group">
+<div class="flex items-start justify-between">
+<span class="font-mono text-[11px] uppercase tracking-wider text-black/80 font-bold">Capital Recovered YTD</span>
+<span class="material-symbols-outlined text-black text-[20px] p-1.5 rounded-xl bg-black/10">account_balance_wallet</span>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="text-3xl font-display font-black text-black tracking-tight">$84,378</span>
+<span class="text-xs font-mono text-black/80 font-bold">.50</span>
+</div>
+<div class="mt-3 pt-3 border-t border-black/15 flex items-center justify-between text-xs font-bold font-mono">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black text-brand-yellow text-[11px]">
+<span class="material-symbols-outlined text-[13px]">verified</span> 42 Claims Won
+              </div>
+<span class="text-[11px] text-black/90">98.4% Defense Win</span>
+</div>
+</div>
+<!-- KPI 3: Exception / Loss Prevention -->
+<div class="p-5 rounded-2xl bg-brand-card border border-brand-border hover:border-brand-borderActive transition-all relative overflow-hidden group">
+<div class="flex items-start justify-between">
+<span class="font-mono text-[11px] uppercase tracking-wider text-brand-muted font-semibold">Loss Prevention Catch</span>
+<span class="material-symbols-outlined text-brand-orange text-[20px] p-1.5 rounded-xl bg-brand-orange/10">gavel</span>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="text-3xl font-display font-black text-white tracking-tight">$51,954</span>
+<span class="text-xs font-mono text-brand-orange font-bold">Disputed</span>
+</div>
+<div class="mt-3 pt-3 border-t border-brand-border/60 flex items-center justify-between text-xs">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-orange/10 text-brand-orange font-mono text-[11px] font-bold">
+<span class="material-symbols-outlined text-[13px]">trending_down</span> -1.85%
+              </div>
+<span class="text-[11px] font-mono text-brand-muted">Chargeback stop</span>
+</div>
+</div>
+<!-- KPI 4: SLA & Audit Win Rate -->
+<div class="p-5 rounded-2xl bg-brand-card border border-brand-border hover:border-brand-borderActive transition-all relative overflow-hidden group">
+<div class="flex items-start justify-between">
+<span class="font-mono text-[11px] uppercase tracking-wider text-brand-muted font-semibold">Autonomous SLA Compliance</span>
+<span class="material-symbols-outlined text-brand-cyan text-[20px] p-1.5 rounded-xl bg-brand-cyan/10">verified_user</span>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="text-3xl font-display font-black text-white tracking-tight">98.4%</span>
+<span class="text-xs font-mono text-brand-secondary font-bold">OPTIMAL</span>
+</div>
+<div class="mt-3 pt-3 border-t border-brand-border/60 flex items-center justify-between text-xs">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-secondary/10 text-brand-secondary font-mono text-[11px] font-bold">
+<span class="material-symbols-outlined text-[13px]">north_east</span> +3.45%
+              </div>
+<span class="text-[11px] font-mono text-brand-muted">SHA-256 Notarized</span>
+</div>
+</div>
+</section>
+<!-- 2. KIA ORA 5-AGENT PIPELINE STRIP (Dual-Lane Autonomous Switch) -->
+<section class="p-6 rounded-2xl bg-brand-card border border-brand-border space-y-4" data-purpose="cube-agent-pipeline">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-brand-border">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-brand-yellow/15 text-brand-yellow flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+</div>
+<div>
+<h2 class="font-syne font-extrabold text-base tracking-tight text-white uppercase">The 5 Operational Visual Agents</h2>
+<p class="text-xs text-brand-muted">Automated physical provenance pipeline verifying carton integrity, prep rules, and filing carrier claims</p>
+</div>
+</div>
+<div class="flex items-center gap-2 font-mono text-[10px]">
+<span class="px-2.5 py-1 rounded-full bg-brand-secondary/10 text-brand-secondary font-bold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-brand-secondary"></span> 4 Idle/Ready
+              </span>
+<span class="px-2.5 py-1 rounded-full bg-brand-yellow/15 text-brand-yellow font-bold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-brand-yellow animate-pulse"></span> 1 Recovery Live
+              </span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+<!-- Stage 01: Receiving Manager -->
+<div class="p-4 rounded-xl bg-brand-surface border border-brand-border hover:border-brand-borderActive transition-all flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xl font-syne font-black text-brand-yellow">01</span>
+<span class="px-2 py-0.5 rounded-full bg-brand-secondary/10 text-brand-secondary text-[10px] font-mono font-bold">PASS 99.8%</span>
+</div>
+<h3 class="font-display font-bold text-sm text-white">Receiving Manager</h3>
+<p class="text-[11px] text-brand-muted mt-1">Dock OCR barcode matching &amp; pallet tare weight balance check.</p>
+</div>
+<div class="mt-4 pt-3 border-t border-brand-border/60 font-mono text-[10px] flex justify-between text-brand-muted">
+<span>Model: Vision-PO-v4</span>
+<span class="text-brand-secondary">128 Verified</span>
+</div>
+</div>
+<!-- Stage 02: Prep Manager -->
+<div class="p-4 rounded-xl bg-brand-surface border border-brand-border hover:border-brand-borderActive transition-all flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xl font-syne font-black text-brand-yellow">02</span>
+<span class="px-2 py-0.5 rounded-full bg-brand-yellow/10 text-brand-yellow text-[10px] font-mono font-bold">FBA LANE</span>
+</div>
+<h3 class="font-display font-bold text-sm text-white">Prep Manager</h3>
+<p class="text-[11px] text-brand-muted mt-1">Suffocation warning label OCR, polybag thickness &amp; barcode audit.</p>
+</div>
+<div class="mt-4 pt-3 border-t border-brand-border/60 font-mono text-[10px] flex justify-between text-brand-muted">
+<span>Rule: Amazon 1.5mil</span>
+<span class="text-brand-secondary">64 Sealed</span>
+</div>
+</div>
+<!-- Stage 03: Pack Manager -->
+<div class="p-4 rounded-xl bg-brand-surface border border-brand-border hover:border-brand-borderActive transition-all flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xl font-syne font-black text-brand-yellow">03</span>
+<span class="px-2 py-0.5 rounded-full bg-brand-cyan/15 text-brand-cyan text-[10px] font-mono font-bold">MFN LANE</span>
+</div>
+<h3 class="font-display font-bold text-sm text-white">Pack Manager</h3>
+<p class="text-[11px] text-brand-muted mt-1">Overhead visual pack inspection, void-fill scan &amp; shipping thermal label.</p>
+</div>
+<div class="mt-4 pt-3 border-t border-brand-border/60 font-mono text-[10px] flex justify-between text-brand-muted">
+<span>Cam: Station-03</span>
+<span class="text-brand-secondary">48 Packed</span>
+</div>
+</div>
+<!-- Stage 04: Returns Manager -->
+<div class="p-4 rounded-xl bg-brand-surface border border-brand-orange/40 bg-brand-orange/[0.02] transition-all flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xl font-syne font-black text-brand-orange">04</span>
+<span class="px-2 py-0.5 rounded-full bg-brand-orange/20 text-brand-orange text-[10px] font-mono font-bold animate-pulse">ATTN REQ (1)</span>
+</div>
+<h3 class="font-display font-bold text-sm text-white">Returns Manager</h3>
+<p class="text-[11px] text-brand-muted mt-1">Switcheroo fraud intercept, cosmetic wear grade &amp; serial verify.</p>
+</div>
+<div class="mt-4 pt-3 border-t border-brand-border/60 font-mono text-[10px] flex justify-between text-brand-muted">
+<span>Flag: Serial Mismatch</span>
+<span class="text-brand-orange font-bold">UNIT-0015</span>
+</div>
+</div>
+<!-- Stage 05: Recovery Manager -->
+<div class="p-4 rounded-xl bg-brand-cardHigh border border-brand-yellow/40 hover:border-brand-yellow transition-all flex flex-col justify-between shadow-[0_0_15px_rgba(255,229,0,0.06)]">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xl font-syne font-black text-brand-yellow">05</span>
+<span class="px-2 py-0.5 rounded-full bg-brand-yellow text-black text-[10px] font-mono font-extrabold uppercase">AUTO-DISPUTE</span>
+</div>
+<h3 class="font-display font-bold text-sm text-white">Recovery Manager</h3>
+<p class="text-[11px] text-brand-muted mt-1">Autonomous Amazon SAFE-T and carrier claim evidence dossier generation.</p>
+</div>
+<div class="mt-4 pt-3 border-t border-brand-border/60 font-mono text-[10px] flex justify-between text-brand-muted">
+<span>Net Recovered</span>
+<span class="text-brand-yellow font-bold">$1,645.00</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. SALESTICS CORE ANALYTICS: BAR CHART & DISTRIBUTION GAUGE & QUICK METRICS -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left Main Chart: Operations Overview (Monthly Bar Chart with Earnings vs Expenditure) -->
+<div class="lg:col-span-8 p-6 rounded-2xl bg-brand-card border border-brand-border space-y-6" data-purpose="salestics-overview-chart">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<h3 class="font-display font-bold text-lg text-white">Operations &amp; Dispute Overview</h3>
+<p class="text-xs text-brand-muted font-mono">Monthly Inspected Volume vs Disputed Capital Recovery</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-4 text-xs font-mono">
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-sm bg-brand-yellow"></span>
+<span class="text-neutral-300">Audited Units ($84,378)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-sm bg-slate-600"></span>
+<span class="text-neutral-400">At-Risk Carrier Fees ($51,954)</span>
+</div>
+</div>
+<div class="px-3 py-1 rounded-lg bg-brand-surface border border-brand-border text-xs font-mono text-neutral-300 flex items-center gap-1">
+<span>Last 8 Months</span>
+<span class="material-symbols-outlined text-[14px]">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Stylized CSS/SVG Bar Chart with Hover Tooltip Badge -->
+<div class="relative pt-8 pb-2">
+<!-- Floating Tooltip Mockup (like Salestics $10,450 / Month Peak) -->
+<div class="absolute left-[44%] top-0 -translate-x-1/2 px-3 py-1.5 rounded-lg bg-brand-surface border border-brand-yellow/60 shadow-lg text-center z-10">
+<span class="text-[9px] font-mono text-brand-muted block uppercase">Peak Inbound</span>
+<span class="text-xs font-mono font-black text-brand-yellow">10,450 Units / $14.2k</span>
+</div>
+<!-- Bar Chart Visual Grid -->
+<div class="h-56 flex items-end justify-between gap-3 sm:gap-6 border-b border-brand-border/60 px-2">
+<!-- Feb -->
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+<div class="w-full max-w-[28px] flex items-end justify-center gap-1 h-full">
+<div class="w-1/2 bg-slate-700 hover:bg-slate-500 rounded-t-sm transition-all h-[55%]"></div>
+<div class="w-1/2 bg-brand-yellow group-hover:brightness-110 rounded-t-sm transition-all h-[70%]"></div>
+</div>
+<span class="font-mono text-[10px] text-brand-muted group-hover:text-white">Feb</span>
+</div>
+<!-- Mar -->
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+<div class="w-full max-w-[28px] flex items-end justify-center gap-1 h-full">
+<div class="w-1/2 bg-slate-700 hover:bg-slate-500 rounded-t-sm transition-all h-[68%]"></div>
+<div class="w-1/2 bg-brand-yellow group-hover:brightness-110 rounded-t-sm transition-all h-[80%]"></div>
+</div>
+<span class="font-mono text-[10px] text-brand-muted group-hover:text-white">Mar</span>
+</div>
+<!-- Apr -->
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+<div class="w-full max-w-[28px] flex items-end justify-center gap-1 h-full">
+<div class="w-1/2 bg-slate-700 hover:bg-slate-500 rounded-t-sm transition-all h-[60%]"></div>
+<div class="w-1/2 bg-brand-yellow group-hover:brightness-110 rounded-t-sm transition-all h-[85%]"></div>
+</div>
+<span class="font-mono text-[10px] text-brand-muted group-hover:text-white">Apr</span>
+</div>
+<!-- May (Peak with dashed indicator) -->
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer relative">
+<div class="absolute inset-x-0 -top-2 bottom-6 border-x border-dashed border-brand-yellow/30 pointer-events-none"></div>
+<div class="w-full max-w-[28px] flex items-end justify-center gap-1 h-full">
+<div class="w-1/2 bg-slate-700 hover:bg-slate-500 rounded-t-sm transition-all h-[75%]"></div>
+<div class="w-1/2 bg-brand-yellow group-hover:brightness-110 rounded-t-sm transition-all h-[95%] shadow-[0_0_15px_rgba(255,229,0,0.3)]"></div>
+</div>
+<span class="font-mono text-[10px] text-brand-yellow font-bold">May</span>
+</div>
+<!-- Jun -->
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+<div class="w-full max-w-[28px] flex items-end justify-center gap-1 h-full">
+<div class="w-1/2 bg-slate-700 hover:bg-slate-500 rounded-t-sm transition-all h-[64%]"></div>
+<div class="w-1/2 bg-brand-yellow group-hover:brightness-110 rounded-t-sm transition-all h-[78%]"></div>
+</div>
+<span class="font-mono text-[10px] text-brand-muted group-hover:text-white">Jun</span>
+</div>
+<!-- Jul -->
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+<div class="w-full max-w-[28px] flex items-end justify-center gap-1 h-full">
+<div class="w-1/2 bg-slate-700 hover:bg-slate-500 rounded-t-sm transition-all h-[72%]"></div>
+<div class="w-1/2 bg-brand-yellow group-hover:brightness-110 rounded-t-sm transition-all h-[88%]"></div>
+</div>
+<span class="font-mono text-[10px] text-brand-muted group-hover:text-white">Jul</span>
+</div>
+<!-- Aug -->
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+<div class="w-full max-w-[28px] flex items-end justify-center gap-1 h-full">
+<div class="w-1/2 bg-slate-700 hover:bg-slate-500 rounded-t-sm transition-all h-[60%]"></div>
+<div class="w-1/2 bg-brand-yellow group-hover:brightness-110 rounded-t-sm transition-all h-[82%]"></div>
+</div>
+<span class="font-mono text-[10px] text-brand-muted group-hover:text-white">Aug</span>
+</div>
+<!-- Sep -->
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+<div class="w-full max-w-[28px] flex items-end justify-center gap-1 h-full">
+<div class="w-1/2 bg-slate-700 hover:bg-slate-500 rounded-t-sm transition-all h-[66%]"></div>
+<div class="w-1/2 bg-brand-yellow group-hover:brightness-110 rounded-t-sm transition-all h-[90%]"></div>
+</div>
+<span class="font-mono text-[10px] text-brand-muted group-hover:text-white">Sep</span>
+</div>
+</div>
+</div>
+<!-- Chart Sub-Cards: Activity & Customer Growth Cards from Salestics -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+<!-- Sales / Operations Activity Card -->
+<div class="p-4 rounded-xl bg-brand-surface border border-brand-border space-y-3">
+<div class="flex items-center justify-between">
+<span class="font-display font-bold text-xs text-white">Operations Pack Activity</span>
+<span class="text-[10px] font-mono text-brand-muted">Shift Alpha-04</span>
+</div>
+<div class="grid grid-cols-2 gap-2 text-xs">
+<div class="p-2.5 rounded-lg bg-brand-card flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-brand-yellow">inventory_2</span>
+<span class="text-neutral-400">Packed</span>
+</div>
+<span class="font-mono font-bold text-white">2,034</span>
+</div>
+<div class="p-2.5 rounded-lg bg-brand-card flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-brand-secondary">local_shipping</span>
+<span class="text-neutral-400">Shipped</span>
+</div>
+<span class="font-mono font-bold text-white">635</span>
+</div>
+<div class="p-2.5 rounded-lg bg-brand-card flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-brand-cyan">task_alt</span>
+<span class="text-neutral-400">Delivered</span>
+</div>
+<span class="font-mono font-bold text-white">1,186</span>
+</div>
+<div class="p-2.5 rounded-lg bg-brand-card flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-brand-orange">receipt</span>
+<span class="text-neutral-400">Disputed</span>
+</div>
+<span class="font-mono font-bold text-brand-orange">$1,645</span>
+</div>
+</div>
+</div>
+<!-- Customer Growth / Throughput Capacity Progress -->
+<div class="p-4 rounded-xl bg-brand-surface border border-brand-border flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-1">
+<span class="font-display font-bold text-xs text-white">Warehouse Autonomous Throughput</span>
+<span class="inline-flex items-center gap-1 font-mono text-[10px] text-brand-secondary">
+<span class="material-symbols-outlined text-[12px]">north_east</span> +2% MoM
+                    </span>
+</div>
+<div class="flex items-baseline gap-2 mt-2">
+<span class="text-3xl font-display font-black text-white">83%</span>
+<span class="text-xs text-brand-muted font-mono">of max station capacity</span>
+</div>
+</div>
+<div class="space-y-2 mt-3">
+<div class="w-full bg-brand-card h-3 rounded-full overflow-hidden p-0.5 border border-brand-border">
+<div class="bg-brand-yellow h-full rounded-full transition-all duration-500" style="width: 83%;"></div>
+</div>
+<div class="flex items-center justify-between font-mono text-[10px] text-brand-muted">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">groups</span>
+                      185,854 items total (+1,250 today)
+                    </span>
+<span class="text-white font-bold">17h run-time</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Salestics Semi-Circular Radial Gauge (Sales Distribution / Dispute Settlement) -->
+<div class="lg:col-span-4 p-6 rounded-2xl bg-brand-card border border-brand-border flex flex-col justify-between space-y-6" data-purpose="salestics-gauge">
+<div class="flex items-center justify-between">
+<div>
+<h3 class="font-display font-bold text-base text-white">Provenance Distribution</h3>
+<p class="text-xs text-brand-muted font-mono">Routing Matrix Volume Breakdown</p>
+</div>
+<button class="p-1 rounded text-neutral-400 hover:text-white" title="Options">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+<!-- Semi-Circular Radial Gauge SVG (from Salestics) -->
+<div class="flex flex-col items-center justify-center relative py-4">
+<svg class="w-64 h-36" viewbox="0 0 200 110">
+<!-- Background Arc -->
+<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#1E2430" stroke-linecap="round" stroke-width="18"></path>
+<!-- Section 1: FBA Prep (Canary Yellow - 45%) -->
+<path d="M 20 100 A 80 80 0 0 1 82 25" fill="none" stroke="#FFE500" stroke-linecap="round" stroke-width="18"></path>
+<!-- Section 2: MFN Dispatch (Emerald - 25%) -->
+<path d="M 88 23 A 80 80 0 0 1 140 38" fill="none" stroke="#4EDEAA" stroke-linecap="round" stroke-width="18"></path>
+<!-- Section 3: Returns Triage (Cyan - 20%) -->
+<path d="M 145 42 A 80 80 0 0 1 172 75" fill="none" stroke="#38BDF8" stroke-linecap="round" stroke-width="18"></path>
+<!-- Section 4: Claims (Orange - 10%) -->
+<path d="M 175 80 A 80 80 0 0 1 180 100" fill="none" stroke="#FF7A45" stroke-linecap="round" stroke-width="18"></path>
+</svg>
+<!-- Center Gauge Metric -->
+<div class="text-center -mt-10">
+<span class="text-[10px] font-mono uppercase tracking-wider text-brand-muted block">Total Channel Units</span>
+<span class="text-3xl font-display font-black text-white tracking-tight">20,000</span>
+<span class="text-xs font-mono text-brand-yellow font-bold block">$1,000,000 Value</span>
+</div>
+</div>
+<!-- Salestics Distribution Legend Breakdown -->
+<div class="space-y-3 pt-2 border-t border-brand-border/60">
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-brand-yellow"></span>
+<span class="text-neutral-200">FBA Inbound Prep</span>
+</div>
+<div class="font-mono text-right">
+<span class="text-white font-bold">9,000 units</span>
+<span class="text-brand-muted text-[11px] ml-2">45%</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-brand-secondary"></span>
+<span class="text-neutral-200">MFN Direct Pack</span>
+</div>
+<div class="font-mono text-right">
+<span class="text-white font-bold">5,000 units</span>
+<span class="text-brand-muted text-[11px] ml-2">25%</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-brand-cyan"></span>
+<span class="text-neutral-200">Returns Restock</span>
+</div>
+<div class="font-mono text-right">
+<span class="text-white font-bold">4,000 units</span>
+<span class="text-brand-muted text-[11px] ml-2">20%</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-brand-orange"></span>
+<span class="text-neutral-200">Carrier Claim Clawback</span>
+</div>
+<div class="font-mono text-right">
+<span class="text-white font-bold">2,000 units</span>
+<span class="text-brand-muted text-[11px] ml-2">10%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. SALESTICS MIDDLE ROW: PRODUCT FUNNEL RIBBON & GLOBAL LOGISTICS MAP -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Product Categories & Funnel Ribbon Flow Chart (from Salestics middle left) -->
+<div class="lg:col-span-6 p-6 rounded-2xl bg-brand-card border border-brand-border space-y-6" data-purpose="salestics-category-funnel">
+<div class="flex items-center justify-between">
+<div>
+<h3 class="font-display font-bold text-base text-white">Product Category Audit Funnel</h3>
+<p class="text-xs text-brand-muted font-mono">Stage Inspection Yield by Merchandise Group</p>
+</div>
+<div class="px-2.5 py-1 rounded-lg bg-brand-surface border border-brand-border text-xs font-mono text-neutral-300">
+                Last 8 Months ▾
+              </div>
+</div>
+<!-- Category Stage Flow Tabs (Women's Clothing, Electronics, Accessories, Footwear, Bags) -->
+<div class="grid grid-cols-5 gap-2 text-center font-mono">
+<div class="p-2 rounded-xl bg-brand-surface border border-brand-border/60">
+<span class="material-symbols-outlined text-[16px] text-brand-muted block mx-auto">apparel</span>
+<span class="text-xs font-bold text-white block mt-1">35%</span>
+<span class="text-[9px] text-brand-muted truncate block">Apparel</span>
+</div>
+<div class="p-2 rounded-xl bg-brand-surface border border-brand-border/60">
+<span class="material-symbols-outlined text-[16px] text-brand-muted block mx-auto">devices</span>
+<span class="text-xs font-bold text-white block mt-1">25%</span>
+<span class="text-[9px] text-brand-muted truncate block">Electronics</span>
+</div>
+<!-- Active Highlight Category (like the orange card in Salestics) -->
+<div class="p-2 rounded-xl bg-brand-yellow text-black border border-brand-yellow shadow-md">
+<span class="material-symbols-outlined text-[16px] text-black block mx-auto">watch</span>
+<span class="text-xs font-black text-black block mt-1">20%</span>
+<span class="text-[9px] font-bold text-black uppercase truncate block">Accessories</span>
+<span class="text-[8px] bg-black text-brand-yellow px-1 rounded block mt-0.5">24 SKUs</span>
+</div>
+<div class="p-2 rounded-xl bg-brand-surface border border-brand-border/60">
+<span class="material-symbols-outlined text-[16px] text-brand-muted block mx-auto">roller_skating</span>
+<span class="text-xs font-bold text-white block mt-1">15%</span>
+<span class="text-[9px] text-brand-muted truncate block">Footwear</span>
+</div>
+<div class="p-2 rounded-xl bg-brand-surface border border-brand-border/60">
+<span class="material-symbols-outlined text-[16px] text-brand-muted block mx-auto">shopping_bag</span>
+<span class="text-xs font-bold text-white block mt-1">5%</span>
+<span class="text-[9px] text-brand-muted truncate block">Bags</span>
+</div>
+</div>
+<!-- Funnel Flow Visual Ribbon SVG (Salestics visual ribbon flow) -->
+<div class="relative h-28 w-full bg-brand-surface rounded-xl overflow-hidden border border-brand-border flex items-center justify-center p-2">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 500 90">
+<defs>
+<lineargradient id="funnelGrad" x1="0" x2="1" y1="0" y2="0">
+<stop offset="0%" stop-color="#38BDF8" stop-opacity="0.25"></stop>
+<stop offset="40%" stop-color="#FFE500" stop-opacity="0.85"></stop>
+<stop offset="60%" stop-color="#FFE500" stop-opacity="0.85"></stop>
+<stop offset="100%" stop-color="#4EDEAA" stop-opacity="0.3"></stop>
+</lineargradient>
+</defs>
+<!-- Wide funnel ribbon polygon -->
+<polygon fill="url(#funnelGrad)" opacity="0.4" points="0,15 200,30 200,60 0,75"></polygon>
+<!-- Highlight center block -->
+<rect fill="#FFE500" fill-opacity="0.9" height="42" rx="4" width="100" x="200" y="24"></rect>
+<!-- Exiting funnel ribbon -->
+<polygon fill="url(#funnelGrad)" opacity="0.4" points="300,30 500,10 500,80 300,60"></polygon>
+<line stroke="#FFE500" stroke-dasharray="4 4" stroke-width="1.5" x1="0" x2="500" y1="45" y2="45"></line>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<span class="font-mono text-xs font-black text-black px-2 py-0.5 rounded bg-brand-yellow shadow-md">
+                  ACC-HUB: 99.4% DISPUTE FREE
+                </span>
+</div>
+</div>
+<div class="flex items-center justify-between text-xs font-mono text-brand-muted">
+<span>Primary Node: New Jersey Bulk Depot</span>
+<span class="text-brand-secondary font-bold">Zero Fraud Chargebacks</span>
+</div>
+</div>
+<!-- Global Logistics Map & Node Ledger (from Salestics middle right) -->
+<div class="lg:col-span-6 p-6 rounded-2xl bg-brand-card border border-brand-border space-y-4" data-purpose="salestics-logistics-map">
+<div class="flex items-center justify-between">
+<div>
+<h3 class="font-display font-bold text-base text-white">Global Inbound &amp; Fulfillment Nodes</h3>
+<p class="text-xs text-brand-muted font-mono">Real-Time Autonomous Evidence Gateways</p>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-surface border border-brand-border text-xs font-mono text-brand-secondary">
+<span class="w-1.5 h-1.5 rounded-full bg-brand-secondary"></span> 5 Nodes Live
+              </div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+<!-- World Map Vector Graphic (Simulated high-tech stylized dots with node pins) -->
+<div class="sm:col-span-7 relative h-48 bg-brand-surface rounded-xl border border-brand-border overflow-hidden flex items-center justify-center p-2">
+<svg class="w-full h-full text-slate-700 opacity-60" fill="currentColor" viewbox="0 0 400 200">
+<!-- Simplified World Outline Shapes -->
+<circle cx="90" cy="70" fill="#1C2331" r="28"></circle>
+<circle cx="120" cy="130" fill="#1C2331" r="20"></circle>
+<circle cx="210" cy="60" fill="#1C2331" r="32"></circle>
+<circle cx="230" cy="120" fill="#1C2331" r="24"></circle>
+<circle cx="310" cy="75" fill="#1C2331" r="36"></circle>
+<circle cx="330" cy="140" fill="#1C2331" r="18"></circle>
+<!-- Geographic Mesh Dots -->
+<circle cx="75" cy="65" fill="#64748B" r="2"></circle>
+<circle cx="95" cy="75" fill="#64748B" r="2"></circle>
+<circle cx="115" cy="60" fill="#64748B" r="2"></circle>
+<circle cx="205" cy="55" fill="#64748B" r="2"></circle>
+<circle cx="225" cy="70" fill="#64748B" r="2"></circle>
+<circle cx="315" cy="65" fill="#64748B" r="2"></circle>
+<circle cx="300" cy="90" fill="#64748B" r="2"></circle>
+</svg>
+<!-- Ping Markers with Pulse -->
+<!-- US East (Pin 1) -->
+<div class="absolute left-[24%] top-[34%] group cursor-pointer">
+<span class="flex h-3 w-3 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-yellow opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-brand-yellow border-2 border-black"></span>
+</span>
+</div>
+<!-- Germany EU-Central (Pin 2) -->
+<div class="absolute left-[52%] top-[30%] group cursor-pointer">
+<span class="flex h-2.5 w-2.5 relative">
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-secondary border-2 border-black"></span>
+</span>
+</div>
+<!-- Qatar ME-Hub (Pin 3) -->
+<div class="absolute left-[58%] top-[45%] group cursor-pointer">
+<span class="flex h-2.5 w-2.5 relative">
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-cyan border-2 border-black"></span>
+</span>
+</div>
+<!-- Japan APAC (Pin 4) -->
+<div class="absolute left-[78%] top-[38%] group cursor-pointer">
+<span class="flex h-3 w-3 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-yellow opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-brand-yellow border-2 border-black"></span>
+</span>
+</div>
+</div>
+<!-- Node Table with Flags & Percentages (Exact Salestics Visitors layout) -->
+<div class="sm:col-span-5 space-y-2 font-mono text-xs">
+<div class="flex items-center justify-between p-2 rounded-lg bg-brand-surface border border-brand-border">
+<div class="flex items-center gap-2">
+<span class="text-sm">🇺🇸</span>
+<span class="text-white font-medium">United States</span>
+</div>
+<div class="text-right">
+<span class="text-white font-bold">128K</span>
+<span class="text-brand-yellow font-bold ml-1.5">27%</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2 rounded-lg bg-brand-surface border border-brand-border">
+<div class="flex items-center gap-2">
+<span class="text-sm">🇯🇵</span>
+<span class="text-white font-medium">Japan</span>
+</div>
+<div class="text-right">
+<span class="text-white font-bold">115K</span>
+<span class="text-brand-secondary font-bold ml-1.5">24%</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2 rounded-lg bg-brand-surface border border-brand-border">
+<div class="flex items-center gap-2">
+<span class="text-sm">🇶🇦</span>
+<span class="text-white font-medium">Qatar</span>
+</div>
+<div class="text-right">
+<span class="text-white font-bold">95K</span>
+<span class="text-brand-cyan font-bold ml-1.5">20%</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2 rounded-lg bg-brand-surface border border-brand-border">
+<div class="flex items-center gap-2">
+<span class="text-sm">🇩🇪</span>
+<span class="text-white font-medium">Germany</span>
+</div>
+<div class="text-right">
+<span class="text-white font-bold">81K</span>
+<span class="text-neutral-400 font-bold ml-1.5">17%</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-2 pt-1 text-[11px] text-brand-muted">
+<span>Other Global 3PLs</span>
+<span>57K • 12%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 5. SALESTICS BOTTOM ROW: TOP PRODUCTS / ACTIVE AUDIT MATRIX & RECENT ACTIVITY FEED -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left: Top Products / Flagged SKUs & Active Passports Table (Combines Salestics Top Products + CUBE Unit Passports) -->
+<div class="lg:col-span-8 p-6 rounded-2xl bg-brand-card border border-brand-border space-y-4" data-purpose="salestics-top-products">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-brand-yellow text-[20px]">verified</span>
+<div>
+<h3 class="font-display font-bold text-base text-white">Top Audited SKUs &amp; Passport Ledger</h3>
+<p class="text-xs text-brand-muted font-mono">Live physical unit pass rates, at-risk carrier chargebacks, and cryptoseals</p>
+</div>
+</div>
+<!-- Filter Strip -->
+<div class="flex items-center gap-2 font-mono text-xs">
+<button class="px-3 py-1 rounded-lg bg-brand-yellow text-black font-bold">All SKUs</button>
+<button class="px-3 py-1 rounded-lg bg-brand-surface text-neutral-400 hover:text-white border border-brand-border">Flagged (1)</button>
+<button class="px-3 py-1 rounded-lg bg-brand-surface text-neutral-400 hover:text-white border border-brand-border">FBA</button>
+<button class="px-3 py-1 rounded-lg bg-brand-surface text-neutral-400 hover:text-white border border-brand-border">MFN</button>
+</div>
+</div>
+<!-- High Density Table (Incorporating Salestics Product Name, Product ID, Sales, Earnings, Stock, Status) -->
+<div class="overflow-x-auto rounded-xl border border-brand-border bg-brand-surface">
+<table class="w-full text-left border-collapse text-xs">
+<thead>
+<tr class="border-b border-brand-border bg-brand-card font-mono text-[11px] text-brand-muted uppercase">
+<th class="py-3 px-4 font-semibold">Product Name / Unit</th>
+<th class="py-3 px-3 font-semibold">SKU ID</th>
+<th class="py-3 px-3 font-semibold text-center">Route</th>
+<th class="py-3 px-3 font-semibold">Audited Units</th>
+<th class="py-3 px-3 font-semibold">Dispute Value</th>
+<th class="py-3 px-3 font-semibold">Status / AI Verdict</th>
+<th class="py-3 px-4 text-right font-semibold">Passport</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-brand-border/60 font-mono text-neutral-300">
+<!-- Row 1: Pro ANC Headset (Flagged / Low Stock Exception from Salestics) -->
+<tr class="hover:bg-brand-card/80 transition-colors bg-brand-orange/[0.04]">
+<td class="py-3.5 px-4 font-sans">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-brand-cardHigh border border-brand-orange/40 flex items-center justify-center text-brand-orange">
+<span class="material-symbols-outlined text-[18px]">headphones</span>
+</div>
+<div>
+<div class="font-display font-bold text-white">Classic Leather Wireless Headset</div>
+<div class="font-mono text-[10px] text-brand-muted">UNIT-0015 • PO-9983</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<span class="text-brand-yellow font-medium">SKU-AUDIO-ANC</span>
+</td>
+<td class="py-3.5 px-3 text-center">
+<span class="px-2 py-0.5 rounded bg-brand-cyan/15 text-brand-cyan text-[10px]">MFN</span>
+</td>
+<td class="py-3.5 px-3 font-bold text-white">500</td>
+<td class="py-3.5 px-3 text-brand-orange font-bold">$25,000</td>
+<td class="py-3.5 px-3">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-orange/20 text-brand-orange text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-brand-orange animate-ping"></span> REVIEW (Missing Label)
+                      </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<button class="pill-btn px-2.5 py-1 rounded-full bg-brand-orange text-black font-bold font-sans text-[11px] hover:bg-white" onclick="alert('Opening Human-in-the-Loop review for UNIT-0015')">
+                        Resolve
+                      </button>
+</td>
+</tr>
+<!-- Row 2: Blue Stainless Bottle (In Stock / Pass) -->
+<tr class="hover:bg-brand-card/80 transition-colors">
+<td class="py-3.5 px-4 font-sans">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-brand-cardHigh border border-brand-border flex items-center justify-center text-brand-secondary">
+<span class="material-symbols-outlined text-[18px]">water_bottle</span>
+</div>
+<div>
+<div class="font-display font-bold text-white">Designer Thermal Travel Bottle</div>
+<div class="font-mono text-[10px] text-brand-muted">UNIT-0014 • PO-9982</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<span class="text-neutral-300">SKU-BLUE-BTL</span>
+</td>
+<td class="py-3.5 px-3 text-center">
+<span class="px-2 py-0.5 rounded bg-brand-yellow/15 text-brand-yellow text-[10px]">FBA</span>
+</td>
+<td class="py-3.5 px-3 font-bold text-white">350</td>
+<td class="py-3.5 px-3 text-brand-secondary font-bold">$52,500</td>
+<td class="py-3.5 px-3">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-secondary/15 text-brand-secondary text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-brand-secondary"></span> VERIFIED 100%
+                      </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<button class="pill-btn px-2.5 py-1 rounded-full bg-brand-cardHigh text-white hover:text-brand-yellow border border-brand-border text-[11px]" onclick="alert('Viewing Cryptographic Passport SHA-256 for UNIT-0014')">
+                        Passport 🪪
+                      </button>
+</td>
+</tr>
+<!-- Row 3: Foldable 4K Drone (Recovered Claim) -->
+<tr class="hover:bg-brand-card/80 transition-colors">
+<td class="py-3.5 px-4 font-sans">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-brand-cardHigh border border-brand-border flex items-center justify-center text-brand-yellow">
+<span class="material-symbols-outlined text-[18px]">flight</span>
+</div>
+<div>
+<div class="font-display font-bold text-white">Foldable Quadcopter Drone 4K</div>
+<div class="font-mono text-[10px] text-brand-muted">UNIT-LIVE-9021 • RET-5510</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<span class="text-neutral-300">SKU-DRONE-4K</span>
+</td>
+<td class="py-3.5 px-3 text-center">
+<span class="px-2 py-0.5 rounded bg-brand-yellow/15 text-brand-yellow text-[10px]">FBA</span>
+</td>
+<td class="py-3.5 px-3 font-bold text-white">120</td>
+<td class="py-3.5 px-3 text-brand-yellow font-bold">$18,400</td>
+<td class="py-3.5 px-3">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-yellow/20 text-brand-yellow text-[10px] font-bold">
+                        CLAIM WON ($489)
+                      </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<button class="pill-btn px-2.5 py-1 rounded-full bg-brand-cardHigh text-white hover:text-brand-yellow border border-brand-border text-[11px]">
+                        Dossier 📄
+                      </button>
+</td>
+</tr>
+<!-- Row 4: Smart Plug Mini Pack -->
+<tr class="hover:bg-brand-card/80 transition-colors">
+<td class="py-3.5 px-4 font-sans">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-brand-cardHigh border border-brand-border flex items-center justify-center text-neutral-300">
+<span class="material-symbols-outlined text-[18px]">power</span>
+</div>
+<div>
+<div class="font-display font-bold text-white">Smart Plug Energy Monitor 4PK</div>
+<div class="font-mono text-[10px] text-brand-muted">UNIT-0012 • PO-9971</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<span class="text-neutral-300">SKU-SMART-PLUG</span>
+</td>
+<td class="py-3.5 px-3 text-center">
+<span class="px-2 py-0.5 rounded bg-brand-cyan/15 text-brand-cyan text-[10px]">MFN</span>
+</td>
+<td class="py-3.5 px-3 font-bold text-white">410</td>
+<td class="py-3.5 px-3 text-neutral-400 font-bold">$12,300</td>
+<td class="py-3.5 px-3">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-secondary/15 text-brand-secondary text-[10px] font-bold">
+                        PASSED DMM
+                      </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<button class="pill-btn px-2.5 py-1 rounded-full bg-brand-cardHigh text-white hover:text-brand-yellow border border-brand-border text-[11px]">
+                        Passport 🪪
+                      </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="flex items-center justify-between text-xs font-mono text-brand-muted pt-1">
+<span>Showing 4 active priority SKU records out of 142 total in ledger</span>
+<span class="text-white">All cryptographic signatures verified ECDSA-secp256k1</span>
+</div>
+</div>
+<!-- Right: Recent Live Activity Stream (Salestics bottom-right activity list) -->
+<div class="lg:col-span-4 p-6 rounded-2xl bg-brand-card border border-brand-border flex flex-col justify-between space-y-4" data-purpose="salestics-recent-activity">
+<div class="flex items-center justify-between border-b border-brand-border pb-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-brand-yellow animate-ping"></span>
+<h3 class="font-display font-bold text-base text-white">Recent Live Activity</h3>
+</div>
+<span class="font-mono text-[10px] text-brand-muted">Real-Time</span>
+</div>
+<!-- Activity Stream List -->
+<div class="space-y-3.5 flex-1 overflow-y-auto">
+<!-- Item 1: System Automatic Backup -->
+<div class="flex items-start gap-3 p-2.5 rounded-xl bg-brand-surface border border-brand-border/60">
+<div class="w-8 h-8 rounded-full bg-brand-yellow/15 text-brand-yellow flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">dns</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-display font-bold text-xs text-white">System Ledger Sync</span>
+<span class="font-mono text-[10px] text-brand-muted">08:05 AM</span>
+</div>
+<p class="text-[11px] text-brand-muted mt-0.5 truncate">Completed automated proof batch checkpoint to AWS S3 &amp; ETH anchor.</p>
+</div>
+</div>
+<!-- Item 2: Alice Johnson (from Salestics) -->
+<div class="flex items-start gap-3 p-2.5 rounded-xl bg-brand-surface border border-brand-border/60">
+<div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 font-syne font-bold text-xs">
+                  AJ
+                </div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-display font-bold text-xs text-white">Alice Johnson (Auditor)</span>
+<span class="font-mono text-[10px] text-brand-muted">09:20 AM</span>
+</div>
+<p class="text-[11px] text-brand-muted mt-0.5">Updated packaging spec for "Eco-Friendly T-Shirt" (EFT-4521) suffocation text.</p>
+</div>
+</div>
+<!-- Item 3: Agent 05 Automated Claim File -->
+<div class="flex items-start gap-3 p-2.5 rounded-xl bg-brand-surface border border-brand-yellow/40">
+<div class="w-8 h-8 rounded-full bg-brand-yellow text-black flex items-center justify-center shrink-0 font-bold">
+<span class="material-symbols-outlined text-[16px]">gavel</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-display font-bold text-xs text-brand-yellow">Recovery Agent 05</span>
+<span class="font-mono text-[10px] text-brand-yellow font-bold">11:45 AM</span>
+</div>
+<p class="text-[11px] text-neutral-300 mt-0.5">Amazon SAFE-T Claim #8910321 automatically submitted with 4 high-res photos.</p>
+</div>
+</div>
+<!-- Item 4: Bob Martinez Camera Calibration -->
+<div class="flex items-start gap-3 p-2.5 rounded-xl bg-brand-surface border border-brand-border/60">
+<div class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-syne font-bold text-xs">
+                  BM
+                </div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-display font-bold text-xs text-white">Bob Martinez (Lead Tech)</span>
+<span class="font-mono text-[10px] text-brand-muted">12:10 PM</span>
+</div>
+<p class="text-[11px] text-brand-muted mt-0.5">Re-calibrated Top-Station-03 photogrammetry matrix (+0.01mm accuracy).</p>
+</div>
+</div>
+</div>
+<!-- View All Activities Action -->
+<button class="w-full py-2 rounded-xl bg-brand-surface hover:bg-brand-cardHigh border border-brand-border font-mono text-xs text-neutral-300 hover:text-brand-yellow transition-colors flex items-center justify-center gap-1.5" onclick="alert('Full Audit Event Logs loaded (540 records)')">
+<span>View Full Immutable Audit Trail</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- 6. KIA ORA BRAND BANNER: Cryptographic Proof Assurance -->
+<section class="bg-brand-card border border-brand-border rounded-3xl p-8 sm:p-10 flex flex-col lg:flex-row items-center justify-between gap-6 relative overflow-hidden" data-purpose="kiaora-callout">
+<div class="space-y-2 max-w-3xl">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-yellow text-black font-mono text-[11px] font-black uppercase">
+              ZERO LOST CLAIMS • BULLETPROOF OPERATIONS
+            </div>
+<h3 class="font-syne font-black text-2xl sm:text-3xl text-white tracking-tight uppercase">
+              One Unit. One Evidence Trail. Zero Blind Spots.
+            </h3>
+<p class="text-sm text-brand-muted">
+              Every barcode scan, polybag seal test, and scale measurement produces an immutable visual hash. When carriers deny reimbursement claims, CUBE provides automated defensible dossiers.
+            </p>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<button class="pill-btn px-6 py-3 rounded-full bg-brand-yellow text-black font-display font-black text-xs uppercase tracking-wider hover:bg-white transition-all shadow-[0_0_20px_rgba(255,229,0,0.2)]" onclick="alert('Exporting Complete Cryptographic Proof Audit Pack...')">
+              Export Audit Pack (ZIP/PDF)
+            </button>
+<button class="pill-btn px-6 py-3 rounded-full bg-brand-surface text-white border border-brand-border hover:border-brand-yellow font-display font-bold text-xs uppercase tracking-wider transition-all" onclick="alert('API Webhooks Connected: Amazon SP-API, Shopify Plus, ShipBob, FedEx Claim Gateway.')">
+              API &amp; Webhooks
+            </button>
+</div>
+</section>
+</main>
+<!-- Global Footer -->
+<footer class="border-t border-brand-border mt-12 py-8 bg-brand-surface px-8">
+<div class="max-w-[1720px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-mono text-brand-muted">
+<div class="flex items-center gap-3">
+<span class="font-syne font-black text-white text-base">CUBE</span>
+<span>/</span>
+<span>EVIDENCECHAIN OPERATIONS ENGINE</span>
+<span class="px-2 py-0.5 rounded bg-brand-card border border-brand-border text-brand-yellow">v4.19-PROD</span>
+</div>
+<div class="flex items-center gap-6">
+<a class="hover:text-white transition-colors" href="#">Amazon SP-API Certified</a>
+<a class="hover:text-white transition-colors" href="#">SHA-256 Notarization</a>
+<a class="hover:text-white transition-colors" href="#">Station Hardware API</a>
+<span class="text-brand-secondary font-bold">System Status: Optimal</span>
+</div>
+<div>
+            © 2025 EvidenceChain Systems Inc.
+          </div>
+</div>
+</footer>
+</div>
+</div>
+<!-- Interactive Modal: New Test Unit Workflow (Preserved from CUBE platform) -->
+<div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4" id="workflowModal">
+<div class="relative w-full max-w-xl rounded-2xl bg-brand-card border-2 border-brand-yellow shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+<div class="px-6 py-4 bg-brand-surface border-b border-brand-border flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<span class="p-1.5 rounded-lg bg-brand-yellow text-black material-symbols-outlined text-[20px]">add_task</span>
+<div>
+<h3 class="font-display font-extrabold text-base text-white">Initialize Unit Workflow</h3>
+<p class="text-xs text-brand-muted font-mono">Inject test item into autonomous evidence ledger</p>
+</div>
+</div>
+<button class="p-1.5 rounded-lg text-brand-muted hover:text-white hover:bg-brand-cardHigh transition-colors" id="closeModalBtn" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<form class="p-6 space-y-4" id="unitWorkflowForm">
+<div class="grid grid-cols-2 gap-4 text-xs font-mono">
+<div class="space-y-1">
+<label class="text-brand-muted uppercase font-bold text-[10px]">Unit Passport ID</label>
+<input class="w-full px-3 py-2 rounded-xl bg-brand-surface border border-brand-border text-white focus:outline-none focus:border-brand-yellow" required="" type="text" value="UNIT-TEST-9042"/>
+</div>
+<div class="space-y-1">
+<label class="text-brand-muted uppercase font-bold text-[10px]">Catalog SKU</label>
+<input class="w-full px-3 py-2 rounded-xl bg-brand-surface border border-brand-border text-white focus:outline-none focus:border-brand-yellow" required="" type="text" value="SKU-AUDIO-ANC-PRO"/>
+</div>
+</div>
+<div class="space-y-1 text-xs font-mono">
+<label class="text-brand-muted uppercase font-bold text-[10px]">Routing Channel</label>
+<div class="grid grid-cols-2 gap-3">
+<label class="flex items-center gap-2 p-3 rounded-xl bg-brand-surface border border-brand-border cursor-pointer hover:border-brand-yellow">
+<input checked="" class="text-brand-yellow focus:ring-0" name="route" type="radio"/>
+<div>
+<span class="block font-display font-bold text-white text-xs">FBA Inbound</span>
+<span class="block text-[10px] text-brand-muted">Prep Manager • Polybag</span>
+</div>
+</label>
+<label class="flex items-center gap-2 p-3 rounded-xl bg-brand-surface border border-brand-border cursor-pointer hover:border-brand-yellow">
+<input class="text-brand-yellow focus:ring-0" name="route" type="radio"/>
+<div>
+<span class="block font-display font-bold text-white text-xs">MFN Dispatch</span>
+<span class="block text-[10px] text-brand-muted">Pack Manager • Carrier DMM</span>
+</div>
+</label>
+</div>
+</div>
+<div class="p-3 rounded-xl bg-brand-surface border border-brand-border flex items-center justify-between text-xs font-mono">
+<div class="flex items-center gap-2">
+<input class="rounded text-brand-yellow focus:ring-0" id="returnFlag" type="checkbox"/>
+<label class="text-neutral-300" for="returnFlag">Flag as Customer Return Triage</label>
+</div>
+<span class="px-2 py-0.5 rounded bg-brand-orange/20 text-brand-orange text-[10px]">AGENT 04/05</span>
+</div>
+<div class="pt-3 border-t border-brand-border flex items-center justify-end gap-3">
+<button class="px-4 py-2 rounded-full border border-brand-border text-xs font-mono text-neutral-300 hover:text-white" id="cancelModalBtn" type="button">Cancel</button>
+<button class="pill-btn px-6 py-2 rounded-full bg-brand-yellow text-black font-display font-black text-xs uppercase tracking-wider hover:bg-white transition-all" type="submit">
+            Seed &amp; Start Stage 01
+          </button>
+</div>
+</form>
+</div>
+</div>
+<!-- Micro-Interactions Script -->
+<script>
+    (function initCommandCenter() {
+      const openBtn = document.getElementById('openModalBtn');
+      const closeBtn = document.getElementById('closeModalBtn');
+      const cancelBtn = document.getElementById('cancelModalBtn');
+      const modal = document.getElementById('workflowModal');
+      const form = document.getElementById('unitWorkflowForm');
+
+      function openModal() {
+        if (modal) modal.classList.remove('hidden');
+      }
+
+      function closeModal() {
+        if (modal) modal.classList.add('hidden');
+      }
+
+      if (openBtn) openBtn.addEventListener('click', openModal);
+      if (closeBtn) closeBtn.addEventListener('click', closeModal);
+      if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+      if (modal) {
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeModal();
+        });
+      }
+
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          const submitBtn = form.querySelector('button[type="submit"]');
+          if (submitBtn) {
+            const originalHTML = submitBtn.innerHTML;
+            submitBtn.innerHTML = 'Broadcasting Seed...';
+            submitBtn.disabled = true;
+            setTimeout(function() {
+              alert('Unit UNIT-TEST-9042 successfully injected into Agent 01 (Receiving Manager)!');
+              submitBtn.innerHTML = originalHTML;
+              submitBtn.disabled = false;
+              closeModal();
+            }, 600);
+          }
+        });
+      }
+    })();
+  </script>
+</body></html>

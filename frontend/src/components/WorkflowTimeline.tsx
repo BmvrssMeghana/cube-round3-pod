@@ -1,5 +1,5 @@
 import React from 'react';
-import { StageResult } from '../types';
+import type { StageResult } from '../types';
 import { StatusBadge } from './StatusBadge';
 
 interface WorkflowTimelineProps {
@@ -12,42 +12,51 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ stageResults
   const allStages = ['receiving', 'prep', 'pack', 'returns', 'recovery'];
 
   return (
-    <div className="pipeline-stepper">
-      {allStages.map((stageName) => {
+    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 p-4 rounded-2xl bg-brand-surface border border-brand-border">
+      {allStages.map((stageName, idx) => {
         const sr = stageResults.find((s) => s.stage === stageName);
         const state = sr ? sr.state : 'pending';
         const verdict = sr ? sr.verdict : null;
+        const isActive = currentStage === stageName;
 
-        let statusClass = '';
+        let borderColor = 'border-brand-border';
+        let bgStyle = 'bg-brand-card';
+
         if (state === 'completed') {
-          statusClass = verdict === 'PASS' ? 'completed' : (verdict === 'FAIL' ? 'failed' : 'uncertain');
+          borderColor = verdict === 'PASS' ? 'border-brand-secondary/40' : (verdict === 'FAIL' ? 'border-brand-crimson/40' : 'border-brand-orange/40');
         } else if (state === 'skipped') {
-          statusClass = 'skipped';
+          borderColor = 'border-brand-border/40';
+          bgStyle = 'bg-brand-card/40 opacity-60';
         }
 
-        if (currentStage === stageName) {
-          statusClass += ' active';
+        if (isActive) {
+          borderColor = 'border-brand-yellow';
+          bgStyle = 'bg-brand-cardHigh shadow-[0_0_15px_rgba(255,229,0,0.15)]';
         }
 
         return (
           <div
             key={stageName}
-            className={`stage-node ${statusClass}`}
+            className={`p-3.5 rounded-xl border ${borderColor} ${bgStyle} transition-all flex flex-col justify-between ${onSelectStage ? 'cursor-pointer hover:border-brand-yellow' : ''}`}
             onClick={() => onSelectStage && onSelectStage(stageName)}
-            style={{ cursor: onSelectStage ? 'pointer' : 'default' }}
           >
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-              {state === 'skipped' ? 'SKIPPED' : (state === 'pending' ? 'PENDING' : 'STAGE')}
-            </div>
-            <div className="stage-name">{stageName}</div>
-            <div style={{ marginTop: '8px' }}>
-              <StatusBadge verdict={verdict || (state === 'skipped' ? 'SKIPPED' : 'PENDING')} />
-            </div>
-            {sr?.duration_ms && (
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                {sr.duration_ms}ms
+            <div>
+              <div className="flex items-center justify-between mb-2 font-mono text-[10px] text-brand-muted font-bold uppercase">
+                <span>0{idx + 1}</span>
+                <span className={state === 'skipped' ? 'text-neutral-500' : (state === 'completed' ? 'text-brand-secondary' : 'text-brand-yellow')}>
+                  {state === 'skipped' ? 'SKIPPED' : (state === 'pending' ? 'PENDING' : 'STAGE')}
+                </span>
               </div>
-            )}
+              <div className="font-syne font-bold text-sm text-white uppercase tracking-tight">
+                {stageName}
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-brand-border/40 flex items-center justify-between">
+              <StatusBadge verdict={verdict || (state === 'skipped' ? 'SKIPPED' : 'PENDING')} />
+              {sr?.duration_ms && (
+                <span className="font-mono text-[10px] text-brand-muted">{sr.duration_ms}ms</span>
+              )}
+            </div>
           </div>
         );
       })}

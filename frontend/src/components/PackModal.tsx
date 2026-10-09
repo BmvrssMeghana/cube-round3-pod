@@ -1,105 +1,179 @@
 import React, { useState } from 'react';
+import { CaptureChecklist } from './CaptureChecklist';
+import type { CaptureAttachment } from './CaptureChecklist';
 
 interface PackModalProps {
   unitId: string;
   onClose: () => void;
-  onRunInspection: (unitId: string, payload: any) => Promise<void>;
+  onRunInspection: (unitId: string, payload: any) => Promise<any>;
 }
 
 export const PackModal: React.FC<PackModalProps> = ({ unitId, onClose, onRunInspection }) => {
-  const [expectedSku, setExpectedSku] = useState('SKU-BLUE-BOTTLE-001');
-  const [expectedQty, setExpectedQty] = useState(1);
-  const [detectedSku, setDetectedSku] = useState('SKU-BLUE-BOTTLE-001');
-  const [detectedQty, setDetectedQty] = useState(1);
+  const [orderLines, setOrderLines] = useState('SKU-BLUE-BOTTLE-001:1');
+  const [observedItems, setObservedItems] = useState('SKU-BLUE-BOTTLE-001:1');
+  const [lookAlike, setLookAlike] = useState(false);
+  const [operatorLabel, setOperatorLabel] = useState('');
+  const [captures, setCaptures] = useState<CaptureAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState('');
 
   const handleRun = async () => {
     setLoading(true);
-    const expectedItems = [{ sku: expectedSku, name: expectedSku, quantity: expectedQty }];
-    const detectedItems = [{ sku: detectedSku, name: detectedSku, quantity: detectedQty, confidence: 0.96, box_2d: [0.1, 0.1, 0.5, 0.5] }];
-    
     const payload = {
       order_id: `ORD-PACK-${unitId}`,
-      expected_items: expectedItems,
-      detected_items: detectedItems,
-      order_lines: `${expectedSku}:${expectedQty}`,
-      observed_in_box: `${detectedSku}:${detectedQty}`,
-      operator_verdict: expectedSku === detectedSku && expectedQty === detectedQty ? 'seal' : 'stop_and_fix',
+      order_lines: orderLines,
+      observed_in_box: observedItems,
+      look_alike: lookAlike,
+      operator_label: operatorLabel,
+      operator_verdict: 'review',
+      captures,
     };
     try {
+      setError('');
       const res = await onRunInspection(unitId, payload);
       setResult(res);
-    } catch (e) {
-      console.error(e);
+    } catch (runError) {
+      setError(runError instanceof Error ? runError.message : 'Pack inspection failed.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '700px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 800 }}>📦 Pack Manager Carton Content Verification</h3>
-          <button className="btn btn-secondary" style={{ padding: '4px 8px' }} onClick={onClose}>✕</button>
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-brand-card border-2 border-brand-yellow rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto text-[var(--text-primary)]">
+        <div className="flex items-center justify-between border-b border-brand-border pb-4">
+          <div>
+            <span className="text-[10px] font-poppins text-brand-yellow uppercase tracking-widest block font-bold">
+              AGENT 03 · PACK MANAGER (MFN)
+            </span>
+            <h3 className="font-syne font-extrabold text-xl sm:text-2xl uppercase tracking-tight text-[var(--text-primary)] mt-1">
+              Carton Content &amp; Manifest Verification
+            </h3>
+          </div>
+          <button className="text-neutral-400 hover:text-[var(--text-primary)] text-2xl font-bold font-poppins" onClick={onClose}>
+            ×
+          </button>
         </div>
 
-        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Target Unit: <strong>{unitId}</strong> — Runs Claude Vision 2D bounding box item detection & manifest reconciliation.
+        <p className="text-xs font-poppins text-brand-muted">
+          Target Unit: <strong className="text-[var(--text-primary)]">{unitId}</strong> — Compare open-box contents against expected order manifest prior to sealing.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">
+              Expected Order Lines (SKU:qty; ...)
+            </label>
+            <textarea
+              rows={3}
+              value={orderLines}
+              onChange={(e) => setOrderLines(e.target.value)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl p-3 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">
+              Observed Items in Box (SKU:qty; ...)
+            </label>
+            <textarea
+              rows={3}
+              value={observedItems}
+              onChange={(e) => setObservedItems(e.target.value)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl p-3 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2 pt-2">
+            <input
+              id="pack-lookalike"
+              type="checkbox"
+              checked={lookAlike}
+              onChange={(e) => setLookAlike(e.target.checked)}
+              className="w-4 h-4 rounded border-brand-border bg-brand-surface text-brand-yellow focus:ring-brand-yellow"
+            />
+            <label htmlFor="pack-lookalike" className="text-xs font-poppins text-[var(--text-primary)] cursor-pointer">
+              Look-alike / Identity unverified
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Operator Label / Station ID</label>
+            <input
+              type="text"
+              value={operatorLabel}
+              onChange={(e) => setOperatorLabel(e.target.value)}
+              placeholder="e.g. PACK-01 / Operator M. Davis"
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+            />
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Expected Order Line SKU:</label>
-            <input type="text" value={expectedSku} onChange={(e) => setExpectedSku(e.target.value)} style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '6px', color: 'var(--text-primary)' }} />
-          </div>
+        <CaptureChecklist
+          requiredShots={['Top-down open-box contents']}
+          value={captures}
+          onChange={setCaptures}
+        />
 
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Expected Quantity:</label>
-            <input type="number" value={expectedQty} onChange={(e) => setExpectedQty(parseInt(e.target.value) || 1)} style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '6px', color: 'var(--text-primary)' }} />
-          </div>
+        {error && <p className="font-poppins text-xs text-brand-crimson">{error}</p>}
 
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>AI Detected SKU in Carton:</label>
-            <input type="text" value={detectedSku} onChange={(e) => setDetectedSku(e.target.value)} style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '6px', color: 'var(--text-primary)' }} />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>AI Detected Quantity:</label>
-            <input type="number" value={detectedQty} onChange={(e) => setDetectedQty(parseInt(e.target.value) || 1)} style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '6px', color: 'var(--text-primary)' }} />
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleRun} disabled={loading}>
-            {loading ? '⚡ Running Claude 2D Box Content Reconciliation...' : '▶ Run Pack Verification'}
+        <div className="pt-4 flex items-center justify-end space-x-3 border-t border-brand-border">
+          <button
+            type="button"
+            className="px-5 py-2.5 rounded-full border border-neutral-700 text-xs font-heading font-bold uppercase hover:bg-neutral-800 text-[var(--text-primary)]"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleRun}
+            disabled={loading || captures.length !== 1 || !orderLines.trim() || !observedItems.trim()}
+            className="pill-btn px-6 py-2.5 rounded-full bg-brand-yellow text-black font-heading font-extrabold text-xs uppercase hover:bg-white transition-all shadow-md"
+          >
+            {loading ? 'Reconciling Order…' : 'Run Pack Verification'}
           </button>
         </div>
 
         {result && (
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-glow)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <span style={{ fontWeight: 800, fontSize: '14px' }}>Pack Result ({result.evidence?.record_id})</span>
-              <span style={{ fontWeight: 800, padding: '4px 10px', borderRadius: '4px', background: result.evidence?.decision?.outcome === 'seal' ? 'var(--color-pass-bg)' : 'var(--color-fail-bg)', color: result.evidence?.decision?.outcome === 'seal' ? 'var(--color-pass)' : 'var(--color-fail)' }}>
+          <div className="p-4 rounded-2xl bg-brand-surface border border-brand-yellow/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-syne font-bold text-sm text-[var(--text-primary)]">
+                Pack Result ({result.evidence?.record_id})
+              </span>
+              <span
+                className={`font-poppins text-xs font-bold px-3 py-1 rounded-full ${
+                  result.evidence?.decision?.outcome === 'seal'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-brand-crimson/20 text-brand-crimson border border-brand-crimson/30'
+                }`}
+              >
                 Decision: {result.evidence?.decision?.outcome?.toUpperCase()} ({result.evidence?.decision?.verdict})
               </span>
             </div>
 
-            <div style={{ fontSize: '13px', marginBottom: '12px', color: 'var(--text-secondary)' }}>
-              {result.evidence?.decision?.reason}
-            </div>
+            <p className="text-xs text-brand-muted font-poppins">{result.evidence?.decision?.reason}</p>
 
-            <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>
-              Reconciliation Checks
+            <div className="space-y-1 pt-2">
+              <span className="font-poppins text-[10px] uppercase font-bold text-brand-muted tracking-wider block">
+                Reconciliation Checks ({result.evidence?.checks?.length || 0})
+              </span>
+              {result.evidence?.checks?.map((c: any, i: number) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between text-xs font-poppins p-2 rounded-lg bg-brand-card border border-brand-border"
+                >
+                  <span className="text-[var(--text-secondary)]">
+                    {c.check_key} (Exp: {JSON.stringify(c.expected)} | Obs: {JSON.stringify(c.observed)})
+                  </span>
+                  <strong className={c.verdict === 'PASS' ? 'text-emerald-400' : 'text-brand-crimson'}>
+                    {c.verdict}
+                  </strong>
+                </div>
+              ))}
             </div>
-
-            {result.evidence?.checks?.map((c: any, i: number) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '4px', marginBottom: '4px' }}>
-                <span>{c.check_key} (Expected: {JSON.stringify(c.expected)} | Observed: {JSON.stringify(c.observed)})</span>
-                <strong style={{ color: c.verdict === 'PASS' ? 'var(--color-pass)' : 'var(--color-fail)' }}>{c.verdict}</strong>
-              </div>
-            ))}
           </div>
         )}
       </div>

@@ -1,4 +1,5 @@
-import { WorkflowState, EvidenceRecord } from '../types';
+import type { WorkflowState, EvidenceRecord } from '../types';
+
 
 export const DEMO_WORKFLOWS: Record<string, WorkflowState> = {
   'UNIT-001': {

@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CUBE / EVIDENCECHAIN — Commerce Operations Command Center</title>
+<!-- Tailwind CSS v3 with Forms & Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Space Grotesk, Syne, Inter, JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;family=Poppins:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Custom Configuration -->
+<script>tailwind.config = {theme: {extend: {colors: {brand: {yellow: "#FFDE00", yellowDark: "#E6C800", black: "#0A0A0A", cardDark: "#121212", charcoal: "#1A1A1A", borderDark: "#262626", lightGray: "#F4F4F4"}, "on-secondary-fixed": "#414200", "primary-fixed-dim": "#eed600", "surface-bright": "#2d2e00", "on-background": "#fdfdb9", "on-surface": "#fdfdb9", "on-secondary": "#535500", "on-primary-fixed-variant": "#675c00", "inverse-surface": "#fdfdb9", "on-secondary-container": "#fcff75", "primary-container": "#fee400", "on-error-container": "#ffd2c8", secondary: "#e6ea5a", "surface-container-high": "#202100", "tertiary-container": "#d1f979", "secondary-dim": "#d8db4d", surface: "#0f0f00", "on-tertiary-fixed-variant": "#4e6a00", "surface-container-lowest": "#000000", "tertiary-dim": "#c3eb6d", "on-surface-variant": "#aeaf71", outline: "#777841", "on-secondary-fixed-variant": "#5d5f00", "primary-fixed": "#fee400", "surface-dim": "#0f0f00", "secondary-fixed-dim": "#d8db4d", "tertiary-fixed": "#d1f979", "error-dim": "#d53d18", "secondary-container": "#606200", "secondary-fixed": "#e6ea5a", "on-error": "#450900", "surface-container": "#1a1b00", tertiary: "#f2ffcf", "surface-variant": "#272800", "surface-container-low": "#141400", "inverse-on-surface": "#575823", primary: "#fff2aa", "tertiary-fixed-dim": "#c3eb6d", "surface-container-highest": "#272800", error: "#ff7351", "inverse-primary": "#6b5f00", "on-tertiary-fixed": "#364b00", "primary-dim": "#eed600", "on-tertiary-container": "#455f00", background: "#0f0f00", "on-primary-fixed": "#484000", "error-container": "#b92902", "on-tertiary": "#4c6800", "outline-variant": "#494a17", "on-primary": "#665b00", "on-primary-container": "#5c5200", "surface-tint": "#fff2aa"}, fontFamily: {display: ["Manrope"], heading: ["Space Grotesk", "sans-serif"], mono: ["JetBrains Mono", "monospace"], sans: ["Space Grotesk", "sans-serif"], headline: ["Manrope"], body: ["Poppins"], label: ["Manrope"]}, fontSize: {}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<!-- Custom Styles: Kia Ora Aesthetic Tweaks -->
+<style data-purpose="custom-typography">
+    .font-syne-ultra {
+      font-family: 'Syne', sans-serif;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+    }
+    .pill-btn {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pill-btn:hover {
+      transform: translateY(-2px);
+    }
+    /* Monospace Hash styling */
+    .hash-font {
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.02em;
+    }
+    /* Scroller hide */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-[#0A0A0A] text-[#FAFAFA] font-sans antialiased min-h-screen selection:bg-brand-yellow selection:text-black">
+<!-- BEGIN: TopNotificationBanner -->
+<div class="bg-brand-yellow text-black font-heading text-xs font-bold py-2 px-4 border-b border-black flex items-center justify-between" data-purpose="system-status-ticker"><div class="flex items-center space-x-3 overflow-hidden text-ellipsis whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-black text-[#FFE500] text-[10px] uppercase tracking-wider font-mono font-bold">LIVE SYNC</span>
+<span class="text-[11px] font-bold tracking-tight text-black">SYSTEM VERDICT: <strong class="font-black">5/5 OPERATIONAL AGENTS ONLINE</strong></span>
+<span class="hidden md:inline text-black/75 text-[11px] font-medium">— AUTOMATED AUDIT TRAIL SHA-256 SECURED</span>
+</div>
+<div class="hidden sm:flex items-center space-x-6 text-[11px] font-mono text-black font-semibold">
+<span class="">LATENCY: <strong>18ms</strong></span>
+<span class="">NODE: <strong>EVID-US-EAST-01</strong></span>
+</div></div>
+<!-- END: TopNotificationBanner -->
+<!-- BEGIN: MainHeader -->
+<header class="sticky top-0 z-40 bg-black/90 backdrop-blur-md border-b border-brand-borderDark" data-purpose="global-header">
+<div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+<!-- Logo & Brand Mark (Kia Ora Style) -->
+<div class="flex items-center space-x-6">
+<a class="flex items-center space-x-3 group" href="#">
+<span class="font-syne-ultra text-3xl sm:text-4xl tracking-tighter text-white group-hover:text-brand-yellow transition-colors">CUBE</span>
+<span class="bg-brand-yellow text-black text-[11px] font-mono px-2 py-0.5 font-bold uppercase rounded-sm">CHAIN v2.4</span>
+</a>
+<!-- Main Navigation Pills -->
+<nav class="hidden xl:flex items-center space-x-2 pl-4 border-l border-brand-borderDark">
+<a class="px-4 py-2 text-xs font-bold rounded-full bg-brand-yellow text-black transition-all" href="#">Command Center</a>
+<a class="px-4 py-2 text-xs font-bold rounded-full bg-transparent text-neutral-300 hover:text-white hover:bg-neutral-900 border border-transparent hover:border-neutral-800 transition-all" href="#pipeline">5 Operational Agents</a>
+<a class="px-4 py-2 text-xs font-bold rounded-full bg-transparent text-neutral-300 hover:text-white hover:bg-neutral-900 border border-transparent hover:border-neutral-800 transition-all" href="#ledger">Unit Passports</a>
+<a class="px-4 py-2 text-xs font-bold rounded-full bg-transparent text-neutral-300 hover:text-white hover:bg-neutral-900 border border-transparent hover:border-neutral-800 transition-all" href="#metrics">Financial Claims</a>
+</nav>
+</div>
+<!-- Action Items & Controls -->
+<div class="flex items-center space-x-3">
+<!-- Active Org Selector Pill -->
+<div class="hidden sm:flex items-center bg-brand-cardDark border border-brand-borderDark px-3 py-1.5 rounded-full text-xs font-mono text-neutral-300">
+<span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-ping"></span>
+<span class="">org_demo_alpha</span>
+</div>
+<!-- Quick Create Unit Trigger -->
+<button class="pill-btn inline-flex items-center px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-brand-yellow text-black font-heading font-bold text-xs uppercase tracking-wider hover:bg-white transition-all shadow-sm" onclick="toggleModal('new-unit-modal')">
+<svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+          New Unit Workflow
+        </button>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<main class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+<!-- BEGIN: HeroBannerSection (Kia Ora High Impact Billboard) -->
+<section class="relative bg-brand-yellow text-black rounded-3xl p-8 sm:p-14 lg:p-16 overflow-hidden border border-black shadow-2xl" data-purpose="hero-billboard"><!-- Decorative brutalist label pills -->
+<div class="flex flex-wrap items-center gap-2 mb-8">
+<span class="px-3.5 py-1.5 rounded-full bg-black text-[#FFE500] text-[11px] font-mono font-bold tracking-wider uppercase">01 / DOCK TO DISPUTE</span>
+<span class="px-3.5 py-1.5 rounded-full border border-black text-black text-[11px] font-bold tracking-wide uppercase">PHYSICAL LOGISTICS AUDITING</span>
+<span class="px-3.5 py-1.5 rounded-full border border-black text-black text-[11px] font-bold tracking-wide uppercase">AUTOMATED 3PL GOVERNANCE</span>
+</div>
+<!-- Massive Authentic Kia Ora Style Headline -->
+<div class="max-w-6xl space-y-6">
+<h1 class="font-syne-ultra text-5xl sm:text-7xl lg:text-[84px] leading-[0.96] uppercase text-black font-black tracking-[-0.04em]">
+          ONE UNIT.<br/>
+          ONE EVIDENCE TRAIL.<br/>
+<span class="underline decoration-[5px] decoration-black underline-offset-8">ZERO BLIND SPOTS.</span>
+</h1>
+<p class="font-heading text-lg sm:text-2xl text-black font-bold max-w-3xl leading-snug tracking-tight">
+          Unified evidence operating system for ecommerce logistics. We deploy 5 autonomous visual agents to verify physical stock, prevent pack penalties, and automate 100% of financial fee disputes.
+        </p>
+</div>
+<!-- Quick Action CTA Toolbar inside Hero -->
+<div class="mt-12 pt-8 border-t-2 border-black/20 flex flex-wrap items-center gap-4">
+<button class="pill-btn px-7 py-3.5 rounded-full bg-black text-white font-heading font-black text-xs uppercase tracking-wider hover:bg-neutral-900 flex items-center shadow-lg" onclick="runSampleWorkflow()">
+<svg class="w-3.5 h-3.5 mr-2 text-[#FFE500] fill-current" viewbox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+          Run Demo Inspection (UNIT-0014)
+        </button>
+<a class="pill-btn px-7 py-3.5 rounded-full border-2 border-black text-black font-heading font-black text-xs uppercase tracking-wider hover:bg-black hover:text-[#FFE500] transition-colors" href="#ledger">
+          Audit Review Queue (3 Exceptions)
+        </a>
+<div class="ml-auto hidden lg:flex items-center space-x-6 text-xs font-mono uppercase font-bold text-black/80">
+<span class="">Target Accuracy: 99.98%</span>
+<span class="">•</span>
+<span class="">Amazon FBA + MFN Verified</span>
+</div>
+</div></section>
+<!-- END: HeroBannerSection -->
+<!-- BEGIN: KeyMetricsSection (Brutalist Kia Ora KPI Cards) -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" data-purpose="operational-metrics" id="metrics"><!-- Metric Card 1: Total Units -->
+<div class="bg-brand-cardDark border border-brand-borderDark p-6 rounded-2xl flex flex-col justify-between hover:border-neutral-600 transition-colors shadow-sm">
+<div class="flex items-center justify-between text-neutral-400 text-xs font-mono font-medium uppercase">
+<span class="">Throughput</span>
+<span class="">24H</span>
+</div>
+<div class="my-4">
+<div class="metric-num text-5xl text-white">328</div>
+<div class="text-xs text-neutral-400 mt-1.5 font-heading font-medium">Units Inspected Today</div>
+</div>
+<div class="text-xs font-mono text-emerald-400 flex items-center font-medium">
+<span class="mr-1">↑ 14.2%</span> vs yesterday batch
+</div>
+</div>
+<!-- Metric Card 2: Financial Recovered (Canary Yellow Accent Card) -->
+<div class="bg-brand-yellow text-black border border-black p-6 rounded-2xl flex flex-col justify-between shadow-md">
+<div class="flex items-center justify-between text-black/80 text-xs font-mono font-bold uppercase">
+<span class="">Capital Recovered</span>
+<span class="">YTD</span>
+</div>
+<div class="my-4">
+<div class="metric-num text-4xl sm:text-5xl text-black">$14,820<span class="text-2xl font-bold">.50</span></div>
+<div class="text-xs text-black font-heading font-bold mt-1.5">Disputed Claims Won</div>
+</div>
+<div class="text-xs font-mono font-bold text-black/80">
+          42 Successful FBA Claims
+</div>
+</div>
+<!-- Metric Card 3: Prevented Losses -->
+<div class="bg-brand-cardDark border border-brand-borderDark p-6 rounded-2xl flex flex-col justify-between hover:border-neutral-600 transition-colors shadow-sm">
+<div class="flex items-center justify-between text-neutral-400 text-xs font-mono font-medium uppercase">
+<span class="">Loss Prevention</span>
+<span class="">Pack Stop</span>
+</div>
+<div class="my-4">
+<div class="metric-num text-5xl text-white">$6,410</div>
+<div class="text-xs text-neutral-400 mt-1.5 font-heading font-medium">Chargebacks Prevented</div>
+</div>
+<div class="text-xs font-mono text-neutral-300 font-medium">
+          19 Pack Discrepancies Caught
+</div>
+</div>
+<!-- Metric Card 4: Exceptions Queue (Amber Brutalist) -->
+<div class="bg-brand-cardDark border-2 border-amber-500/50 p-6 rounded-2xl flex flex-col justify-between bg-amber-500/[0.03] shadow-sm">
+<div class="flex items-center justify-between text-amber-400 text-xs font-mono font-bold uppercase">
+<span class="">Manual Action</span>
+<span class="animate-pulse">● ATTN REQ</span>
+</div>
+<div class="my-4">
+<div class="metric-num text-5xl text-amber-400">3</div>
+<div class="text-xs text-neutral-300 mt-1.5 font-heading font-medium">Units in Human Review</div>
+</div>
+<div class="text-xs font-mono text-amber-300 font-medium">
+          Estimated resolution: &lt; 20m
+</div>
+</div>
+<!-- Metric Card 5: Dispute Defense Rate -->
+<div class="bg-brand-cardDark border border-brand-borderDark p-6 rounded-2xl flex flex-col justify-between hover:border-neutral-600 transition-colors shadow-sm">
+<div class="flex items-center justify-between text-neutral-400 text-xs font-mono font-medium uppercase">
+<span class="">Evidence Win Rate</span>
+<span class="">Audit SLA</span>
+</div>
+<div class="my-4">
+<div class="metric-num text-5xl text-white">94.8%</div>
+<div class="text-xs text-neutral-400 mt-1.5 font-heading font-medium">FBA Claim Acceptance</div>
+</div>
+<div class="text-xs font-mono text-emerald-400 font-medium">
+          Cryptographic Hash Backed
+</div>
+</div></section>
+<!-- END: KeyMetricsSection -->
+<!-- BEGIN: 5OperationalAgentsPipeline (Interactive Pipeline Lanes) -->
+<section class="space-y-6" data-purpose="pipeline-stepper" id="pipeline">
+<!-- Section Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between border-b border-brand-borderDark pb-4 gap-4">
+<div>
+<span class="text-xs font-mono uppercase text-brand-yellow tracking-widest block mb-1">AUTOMATED WORKFLOW SYSTEM</span>
+<h2 class="font-syne-ultra text-3xl sm:text-4xl text-white uppercase tracking-tight">The 5 Operational Agents</h2>
+</div>
+<p class="text-neutral-400 text-sm max-w-md font-heading">
+          Autonomous visual micro-agents analyzing every physical touchpoint from the inbound loading dock to dispute settlement.
+        </p>
+</div>
+<!-- Grid of 5 Brutalist Agent Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+<!-- Agent 1: Receiving Manager -->
+<div class="bg-brand-cardDark border border-brand-borderDark rounded-2xl p-5 flex flex-col justify-between relative group hover:border-neutral-600 transition-all">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-2xl font-syne-ultra text-brand-yellow">01</span>
+<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold uppercase">STATUS: PASS</span>
+</div>
+<h3 class="font-heading font-bold text-lg text-white uppercase tracking-wide">Receiving Manager</h3>
+<p class="text-neutral-400 text-xs leading-relaxed">
+              PO quantity matching, variant code check, and automated carton damage classification.
+            </p>
+</div>
+<div class="mt-6 pt-4 border-t border-brand-borderDark/80 space-y-2 text-[11px] font-mono">
+<div class="flex justify-between text-neutral-400">
+<span class="">Model:</span>
+<span class="text-neutral-200">Vision-PO-v4</span>
+</div>
+<div class="flex justify-between text-neutral-400">
+<span class="">Check:</span>
+<span class="text-neutral-200">Damage: 0.02%</span>
+</div>
+</div>
+</div>
+<!-- Agent 2: Prep Manager (FBA Route) -->
+<div class="bg-brand-cardDark border border-brand-borderDark rounded-2xl p-5 flex flex-col justify-between relative group hover:border-neutral-600 transition-all">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-2xl font-syne-ultra text-brand-yellow">02</span>
+<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold uppercase">STATUS: PASS</span>
+</div>
+<div class="flex items-center space-x-2">
+<h3 class="font-heading font-bold text-lg text-white uppercase tracking-wide">Prep Manager</h3>
+<span class="text-[9px] bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded font-mono">FBA</span>
+</div>
+<p class="text-neutral-400 text-xs leading-relaxed">
+              Polybag sealing compliance, suffocation hazard OCR validation, &amp; FNSKU label verification.
+            </p>
+</div>
+<div class="mt-6 pt-4 border-t border-brand-borderDark/80 space-y-2 text-[11px] font-mono">
+<div class="flex justify-between text-neutral-400">
+<span class="">FNSKU:</span>
+<span class="text-neutral-200">X002K899LL</span>
+</div>
+<div class="flex justify-between text-neutral-400">
+<span class="">Bag Seal:</span>
+<span class="text-neutral-200">VERIFIED OK</span>
+</div>
+</div>
+</div>
+<!-- Agent 3: Pack Manager (MFN Route) -->
+<div class="bg-brand-cardDark border border-brand-borderDark rounded-2xl p-5 flex flex-col justify-between relative group hover:border-neutral-600 transition-all">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-2xl font-syne-ultra text-brand-yellow">03</span>
+<span class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold uppercase">STATUS: SEAL</span>
+</div>
+<div class="flex items-center space-x-2">
+<h3 class="font-heading font-bold text-lg text-white uppercase tracking-wide">Pack Manager</h3>
+<span class="text-[9px] bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded font-mono">MFN</span>
+</div>
+<p class="text-neutral-400 text-xs leading-relaxed">
+              Overhead 2D camera box verification, packing slip reconciliation, and carton barcode pairing.
+            </p>
+</div>
+<div class="mt-6 pt-4 border-t border-brand-borderDark/80 space-y-2 text-[11px] font-mono">
+<div class="flex justify-between text-neutral-400">
+<span class="">Camera:</span>
+<span class="text-neutral-200">Top-Station-03</span>
+</div>
+<div class="flex justify-between text-neutral-400">
+<span class="">Weight:</span>
+<span class="text-neutral-200">1.42 kg (MATCH)</span>
+</div>
+</div>
+</div>
+<!-- Agent 4: Returns Manager (Warning / Review Trigger) -->
+<div class="bg-brand-cardDark border-2 border-amber-500/60 rounded-2xl p-5 flex flex-col justify-between relative group bg-amber-500/[0.02]">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-2xl font-syne-ultra text-amber-400">04</span>
+<span class="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/40 text-[10px] font-mono font-bold uppercase animate-pulse">STATUS: REVIEW</span>
+</div>
+<h3 class="font-heading font-bold text-lg text-white uppercase tracking-wide">Returns Manager</h3>
+<p class="text-neutral-400 text-xs leading-relaxed">
+              Return identity validation, completeness inspection, cosmetic grading, and restock disposition.
+            </p>
+</div>
+<div class="mt-6 pt-4 border-t border-brand-borderDark/80 space-y-2 text-[11px] font-mono">
+<div class="flex justify-between text-neutral-400">
+<span class="">Grade:</span>
+<span class="text-amber-300 font-bold">Grade B (Scuff)</span>
+</div>
+<div class="flex justify-between text-neutral-400">
+<span class="">Disposition:</span>
+<span class="text-neutral-200">Liquidate / Claim</span>
+</div>
+</div>
+</div>
+<!-- Agent 5: Recovery Manager (High Value Yellow) -->
+<div class="bg-brand-cardDark border border-brand-yellow/50 rounded-2xl p-5 flex flex-col justify-between relative group hover:border-brand-yellow transition-all">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-2xl font-syne-ultra text-brand-yellow">05</span>
+<span class="px-2 py-0.5 rounded-full bg-brand-yellow text-black text-[10px] font-mono font-bold uppercase">FILED $45.00</span>
+</div>
+<h3 class="font-heading font-bold text-lg text-white uppercase tracking-wide">Recovery Manager</h3>
+<p class="text-neutral-400 text-xs leading-relaxed">
+              Fee dispute classifier, Amazon SLA window tracker, and auto-generated photographic claim packs.
+            </p>
+</div>
+<div class="mt-6 pt-4 border-t border-brand-borderDark/80 space-y-2 text-[11px] font-mono">
+<div class="flex justify-between text-neutral-400">
+<span class="">Dispute Ref:</span>
+<span class="text-neutral-200">CASE_8910321</span>
+</div>
+<div class="flex justify-between text-neutral-400">
+<span class="">SLA Clock:</span>
+<span class="text-brand-yellow">14h remaining</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: 5OperationalAgentsPipeline -->
+<!-- BEGIN: LiveInspectionLedgerSection (Unit Passports Data Grid) -->
+<section class="space-y-4" data-purpose="live-unit-ledger" id="ledger">
+<!-- Table Controls Bar -->
+<div class="bg-brand-cardDark border border-brand-borderDark rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="flex items-center space-x-3">
+<span class="w-3 h-3 rounded-full bg-brand-yellow"></span>
+<h3 class="font-syne-ultra text-xl uppercase tracking-tight text-white">Active Unit Passports &amp; Evidence Ledger</h3>
+<span class="text-xs font-mono bg-neutral-800 text-neutral-400 px-2 py-0.5 rounded">Realtime</span>
+</div>
+<!-- Filter Buttons & Search -->
+<div class="flex flex-wrap items-center gap-2">
+<div class="relative">
+<input class="bg-black border border-brand-borderDark rounded-full px-4 py-1.5 text-xs font-mono text-white placeholder-neutral-500 focus:outline-none focus:border-brand-yellow w-56 sm:w-64" placeholder="Search Unit ID / SKU / SHA..." type="text"/>
+</div>
+<button class="px-3 py-1.5 text-xs font-mono rounded-full bg-brand-yellow text-black font-bold">ALL</button>
+<button class="px-3 py-1.5 text-xs font-mono rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white">FAIL</button>
+<button class="px-3 py-1.5 text-xs font-mono rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white">REVIEW (3)</button>
+<button class="px-3 py-1.5 text-xs font-mono rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white">PASS</button>
+</div>
+</div>
+<!-- Ledger Table (Brutalist High Density) -->
+<div class="overflow-x-auto border border-brand-borderDark rounded-2xl bg-black">
+<table class="w-full text-left border-collapse text-xs">
+<thead>
+<tr class="border-b border-brand-borderDark bg-brand-cardDark/80 font-mono text-neutral-400 uppercase text-[11px]">
+<th class="py-4 px-6 font-semibold">Unit Identifier</th>
+<th class="py-4 px-4 font-semibold">Route</th>
+<th class="py-4 px-4 font-semibold">SKU / Description</th>
+<th class="py-4 px-4 font-semibold">Current Agent</th>
+<th class="py-4 px-4 font-semibold">Agent Verdict</th>
+<th class="py-4 px-4 font-semibold">SHA-256 Content Hash</th>
+<th class="py-4 px-6 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-brand-borderDark font-mono">
+<!-- Row 1: UNIT-0014 (Review Exception) -->
+<tr class="hover:bg-neutral-900/60 transition-colors group">
+<td class="py-4 px-6 font-bold text-brand-yellow flex items-center space-x-2">
+<span class="">UNIT-0014</span>
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+</td>
+<td class="py-4 px-4">
+<span class="bg-neutral-800 text-neutral-200 border border-neutral-700 px-2 py-0.5 rounded text-[10px]">FBA-IN</span>
+</td>
+<td class="py-4 px-4 font-sans font-medium text-neutral-200">
+                PRO-WIRELESS-EARBUDS-BLK
+                <span class="block text-[11px] font-mono text-neutral-500">PO #881903-A</span>
+</td>
+<td class="py-4 px-4 text-neutral-300">
+                04 Returns Manager
+              </td>
+<td class="py-4 px-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
+                  FLAG: UNMATCHED BARCODE
+                </span>
+</td>
+<td class="py-4 px-4 text-neutral-400 text-[11px]">
+<code class="bg-neutral-950 px-2 py-1 rounded text-neutral-400">e9c2b810...a410</code>
+</td>
+<td class="py-4 px-6 text-right space-x-2">
+<button class="pill-btn px-3 py-1 bg-brand-yellow text-black text-xs font-bold font-heading rounded-full hover:bg-white transition-colors" onclick="openReviewModal('UNIT-0014', 'Returns Manager', 'Barcode mismatch detected between physical sleeve and packing manifest')">
+                  Resolve Override ⚡
+                </button>
+<button class="pill-btn px-3 py-1 bg-neutral-800 text-neutral-200 text-xs font-heading rounded-full hover:bg-neutral-700" onclick="openPassportModal('UNIT-0014')">
+                  Passport 🪪
+                </button>
+</td>
+</tr>
+<!-- Row 2: UNIT-0089 (Pass MFN) -->
+<tr class="hover:bg-neutral-900/60 transition-colors">
+<td class="py-4 px-6 font-bold text-white">UNIT-0089</td>
+<td class="py-4 px-4">
+<span class="bg-neutral-800 text-neutral-200 border border-neutral-700 px-2 py-0.5 rounded text-[10px]">MFN-OUT</span>
+</td>
+<td class="py-4 px-4 font-sans font-medium text-neutral-200">
+                LEATHER-DESK-PAD-XL-TAN
+                <span class="block text-[11px] font-mono text-neutral-500">ORDER #990142</span>
+</td>
+<td class="py-4 px-4 text-neutral-300">
+                03 Pack Manager
+              </td>
+<td class="py-4 px-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                  VERIFIED: SEALED
+                </span>
+</td>
+<td class="py-4 px-4 text-neutral-400 text-[11px]">
+<code class="bg-neutral-950 px-2 py-1 rounded text-neutral-400">4c09d57a...ff91</code>
+</td>
+<td class="py-4 px-6 text-right space-x-2">
+<button class="pill-btn px-3 py-1 bg-neutral-800 text-neutral-200 text-xs font-heading rounded-full hover:bg-neutral-700" onclick="openPassportModal('UNIT-0089')">
+                  Passport 🪪
+                </button>
+</td>
+</tr>
+<!-- Row 3: UNIT-0102 (Recovery Claim Filed) -->
+<tr class="hover:bg-neutral-900/60 transition-colors">
+<td class="py-4 px-6 font-bold text-brand-yellow">UNIT-0102</td>
+<td class="py-4 px-4">
+<span class="bg-neutral-800 text-neutral-200 border border-neutral-700 px-2 py-0.5 rounded text-[10px]">FBA-DISPUTE</span>
+</td>
+<td class="py-4 px-4 font-sans font-medium text-neutral-200">
+                MECH-KEYBOARD-RGB-WHITE
+                <span class="block text-[11px] font-mono text-neutral-500">SHIPMENT FBA179X2</span>
+</td>
+<td class="py-4 px-4 text-neutral-300">
+                05 Recovery Manager
+              </td>
+<td class="py-4 px-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-brand-yellow text-black text-[10px] font-bold">
+                  DISPUTE PACK GENERATED ($45.00)
+                </span>
+</td>
+<td class="py-4 px-4 text-neutral-400 text-[11px]">
+<code class="bg-neutral-950 px-2 py-1 rounded text-neutral-400">77fa2b10...33c9</code>
+</td>
+<td class="py-4 px-6 text-right space-x-2">
+<button class="pill-btn px-3 py-1 bg-neutral-800 text-neutral-200 text-xs font-heading rounded-full hover:bg-neutral-700" onclick="openPassportModal('UNIT-0102')">
+                  Passport 🪪
+                </button>
+</td>
+</tr>
+<!-- Row 4: UNIT-0103 (Prep PASS) -->
+<tr class="hover:bg-neutral-900/60 transition-colors">
+<td class="py-4 px-6 font-bold text-white">UNIT-0103</td>
+<td class="py-4 px-4">
+<span class="bg-neutral-800 text-neutral-200 border border-neutral-700 px-2 py-0.5 rounded text-[10px]">FBA-IN</span>
+</td>
+<td class="py-4 px-4 font-sans font-medium text-neutral-200">
+                ERGONOMIC-STAND-ALUM
+                <span class="block text-[11px] font-mono text-neutral-500">PO #881903-B</span>
+</td>
+<td class="py-4 px-4 text-neutral-300">
+                02 Prep Manager
+              </td>
+<td class="py-4 px-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                  FNSKU + POLYBAG AUDITED
+                </span>
+</td>
+<td class="py-4 px-4 text-neutral-400 text-[11px]">
+<code class="bg-neutral-950 px-2 py-1 rounded text-neutral-400">89d311ae...10ff</code>
+</td>
+<td class="py-4 px-6 text-right space-x-2">
+<button class="pill-btn px-3 py-1 bg-neutral-800 text-neutral-200 text-xs font-heading rounded-full hover:bg-neutral-700" onclick="openPassportModal('UNIT-0103')">
+                  Passport 🪪
+                </button>
+</td>
+</tr>
+<!-- Row 5: UNIT-0104 (Receiving PASS) -->
+<tr class="hover:bg-neutral-900/60 transition-colors">
+<td class="py-4 px-6 font-bold text-white">UNIT-0104</td>
+<td class="py-4 px-4">
+<span class="bg-neutral-800 text-neutral-200 border border-neutral-700 px-2 py-0.5 rounded text-[10px]">DOCK-PO</span>
+</td>
+<td class="py-4 px-4 font-sans font-medium text-neutral-200">
+                USB-C-BRAIDED-CABLE-3PK
+                <span class="block text-[11px] font-mono text-neutral-500">CONTAINER CTN-90</span>
+</td>
+<td class="py-4 px-4 text-neutral-300">
+                01 Receiving Manager
+              </td>
+<td class="py-4 px-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                  QTY: 100/100 BOX OK
+                </span>
+</td>
+<td class="py-4 px-4 text-neutral-400 text-[11px]">
+<code class="bg-neutral-950 px-2 py-1 rounded text-neutral-400">3a19bc88...60aa</code>
+</td>
+<td class="py-4 px-6 text-right space-x-2">
+<button class="pill-btn px-3 py-1 bg-neutral-800 text-neutral-200 text-xs font-heading rounded-full hover:bg-neutral-700" onclick="openPassportModal('UNIT-0104')">
+                  Passport 🪪
+                </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- END: LiveInspectionLedgerSection -->
+<!-- BEGIN: BrutalistDesignSystemFooterBanner (Kia Ora Style) -->
+<section class="bg-brand-charcoal border border-brand-borderDark rounded-3xl p-8 sm:p-12 flex flex-col lg:flex-row items-center justify-between gap-8" data-purpose="evidence-integrity-banner">
+<div class="space-y-4 max-w-2xl">
+<span class="px-3 py-1 bg-brand-yellow text-black text-xs font-mono font-bold uppercase rounded-full">CRYPTOGRAPHIC PROOF CHAIN</span>
+<h3 class="font-syne-ultra text-3xl sm:text-5xl text-white uppercase tracking-tight">Zero Lost Claims. Bulletproof Operations.</h3>
+<p class="text-neutral-400 font-heading text-sm sm:text-base">
+          Every inspection checkpoint creates a permanent time-stamped visual hash. When carriers or fulfillment centers deny missing inventory, CUBE submits undeniable proof.
+        </p>
+</div>
+<div class="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+<button class="w-full sm:w-auto pill-btn px-8 py-4 rounded-full bg-brand-yellow text-black font-heading font-bold text-sm tracking-wide uppercase hover:bg-white transition-all shadow-xl text-center" onclick="triggerAuditReport()">
+          Export Audit Pack (PDF/ZIP)
+        </button>
+<button class="w-full sm:w-auto pill-btn px-8 py-4 rounded-full border border-neutral-700 text-white font-heading font-bold text-sm tracking-wide uppercase hover:bg-neutral-800 transition-all text-center" onclick="alert('API Documentation &amp; Webhook Integrations (Shopify, Amazon SP-API, ShipBob) Loaded.')">
+          API &amp; Webhooks
+        </button>
+</div>
+</section>
+<!-- END: BrutalistDesignSystemFooterBanner -->
+</main>
+<!-- BEGIN: MainFooter -->
+<footer class="border-t border-brand-borderDark mt-16 py-12 bg-black" data-purpose="footer">
+<div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+<div class="flex items-center space-x-4">
+<span class="font-syne-ultra text-2xl tracking-tighter text-white">CUBE</span>
+<span class="text-neutral-600 text-xs">/</span>
+<span class="text-xs font-mono text-neutral-400">EVIDENCECHAIN LOGISTICS OS</span>
+</div>
+<div class="flex flex-wrap items-center gap-6 text-xs font-heading font-medium text-neutral-400">
+<a class="hover:text-brand-yellow transition-colors" href="#">Security &amp; Encryption</a>
+<a class="hover:text-brand-yellow transition-colors" href="#">Amazon SP-API Compliance</a>
+<a class="hover:text-brand-yellow transition-colors" href="#">Hardware Overhead Cams</a>
+<a class="hover:text-brand-yellow transition-colors" href="#">System Status: Optimal</a>
+</div>
+<div class="text-xs font-mono text-neutral-500">
+        © 2025 EvidenceChain Systems Inc.
+      </div>
+</div>
+</footer>
+<!-- END: MainFooter -->
+<!-- BEGIN: InteractiveModals -->
+<!-- Modal 1: New Test Unit Workflow Modal -->
+<div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4" id="new-unit-modal">
+<div class="bg-brand-cardDark border-2 border-brand-yellow rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative">
+<div class="flex items-center justify-between border-b border-brand-borderDark pb-4">
+<div>
+<span class="text-[10px] font-mono text-brand-yellow uppercase tracking-widest block">OPERATIONAL DISPATCH</span>
+<h3 class="font-syne-ultra text-2xl uppercase tracking-tight text-white">Create Test Unit</h3>
+</div>
+<button class="text-neutral-400 hover:text-white text-2xl font-bold font-mono" onclick="toggleModal('new-unit-modal')">×</button>
+</div>
+<form class="space-y-4" id="create-unit-form" onsubmit="handleCreateUnit(event)">
+<div>
+<label class="block text-xs font-mono uppercase text-neutral-400 mb-1">Unit ID / Serial Tag</label>
+<input class="w-full bg-black border border-brand-borderDark rounded-xl px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-yellow" id="unit-id-input" required="" type="text" value="UNIT-0105"/>
+</div>
+<div>
+<label class="block text-xs font-mono uppercase text-neutral-400 mb-1">Fulfillment Channel</label>
+<select class="w-full bg-black border border-brand-borderDark rounded-xl px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-yellow" id="unit-route-input">
+<option value="FBA-IN">FBA Inbound (Prep Manager Check)</option>
+<option value="MFN-OUT">MFN Outbound (Overhead Cam Pack Check)</option>
+<option value="RETURN">Customer Return (Grading &amp; Claim)</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-mono uppercase text-neutral-400 mb-1">SKU Description</label>
+<input class="w-full bg-black border border-brand-borderDark rounded-xl px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-yellow" id="unit-sku-input" required="" type="text" value="SMART-SENSING-THERMOSTAT-V2"/>
+</div>
+<div class="pt-4 flex items-center justify-end space-x-3">
+<button class="px-5 py-2.5 rounded-full border border-neutral-700 text-xs font-heading font-bold uppercase hover:bg-neutral-800" onclick="toggleModal('new-unit-modal')" type="button">Cancel</button>
+<button class="pill-btn px-6 py-2.5 rounded-full bg-brand-yellow text-black font-heading font-bold text-xs uppercase hover:bg-white transition-all" type="submit">Start Inspection Pipeline</button>
+</div>
+</form>
+</div>
+</div>
+<!-- Modal 2: Unit Passport Inspector Modal -->
+<div class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4" id="passport-modal">
+<div class="bg-black border border-brand-yellow rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative">
+<div class="flex items-center justify-between border-b border-brand-borderDark pb-4">
+<div>
+<div class="flex items-center space-x-2">
+<span class="px-2.5 py-0.5 rounded-full bg-brand-yellow text-black font-mono font-bold text-[10px] uppercase">CRYPTOGRAPHIC PASSPORT</span>
+<span class="text-xs font-mono text-neutral-400" id="passport-unit-id">UNIT-XXXX</span>
+</div>
+<h3 class="font-syne-ultra text-2xl sm:text-3xl uppercase tracking-tight text-white mt-1">Inspection Certificate</h3>
+</div>
+<button class="text-neutral-400 hover:text-white text-2xl font-bold font-mono" onclick="toggleModal('passport-modal')">×</button>
+</div>
+<!-- Passport Card Details -->
+<div class="grid grid-cols-2 gap-4 text-xs font-mono bg-brand-cardDark p-4 rounded-xl border border-brand-borderDark">
+<div>
+<span class="text-neutral-500 block">TIMESTAMP:</span>
+<span class="text-white font-bold" id="passport-timestamp">2025-05-14T08:24:11.902Z</span>
+</div>
+<div>
+<span class="text-neutral-500 block">LEDGER STATUS:</span>
+<span class="text-emerald-400 font-bold">VERIFIED ON-CHAIN (SHA-256)</span>
+</div>
+<div class="col-span-2">
+<span class="text-neutral-500 block">GENESIS HASH:</span>
+<span class="text-brand-yellow break-all">9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08</span>
+</div>
+</div>
+<!-- 5 Agents Audit Summary in Passport -->
+<div class="space-y-3 font-mono text-xs">
+<h4 class="text-neutral-400 uppercase text-[11px] font-bold">5-Agent Verification Ledger:</h4>
+<div class="space-y-1.5 border border-brand-borderDark rounded-xl p-3 bg-neutral-950">
+<div class="flex justify-between text-neutral-300">
+<span class="">01 Receiving Agent:</span>
+<span class="text-emerald-400">PASS (Zero Box Deformation)</span>
+</div>
+<div class="flex justify-between text-neutral-300">
+<span class="">02 Prep Agent [FBA]:</span>
+<span class="text-emerald-400">PASS (Suffocation Warning 100%)</span>
+</div>
+<div class="flex justify-between text-neutral-300">
+<span class="">03 Pack Agent [MFN]:</span>
+<span class="text-emerald-400">SEALED (Weight Match ±2g)</span>
+</div>
+<div class="flex justify-between text-neutral-300">
+<span class="">04 Returns Agent:</span>
+<span class="text-neutral-400">SKIPPED (Outbound Stream)</span>
+</div>
+<div class="flex justify-between text-neutral-300">
+<span class="">05 Recovery Agent:</span>
+<span class="text-neutral-400">DORMANT (Zero Discrepancy)</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2">
+<span class="text-[11px] font-mono text-neutral-500">Node signed: AWS_US_EAST_CLUSTER_9</span>
+<button class="pill-btn px-6 py-2.5 rounded-full bg-brand-yellow text-black font-heading font-bold text-xs uppercase hover:bg-white transition-all" onclick="toggleModal('passport-modal')">Close Certificate</button>
+</div>
+</div>
+</div>
+<!-- Modal 3: Exception Override Modal -->
+<div class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4" id="review-modal">
+<div class="bg-brand-cardDark border-2 border-amber-500 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative">
+<div class="flex items-center justify-between border-b border-brand-borderDark pb-4">
+<div>
+<span class="text-[10px] font-mono text-amber-400 uppercase tracking-widest block font-bold">MANUAL SUPERVISOR OVERRIDE</span>
+<h3 class="font-syne-ultra text-2xl uppercase tracking-tight text-white" id="review-title">Resolve Exception</h3>
+</div>
+<button class="text-neutral-400 hover:text-white text-2xl font-bold font-mono" onclick="toggleModal('review-modal')">×</button>
+</div>
+<div class="bg-black/60 p-4 rounded-xl border border-neutral-800 space-y-2">
+<div class="text-xs font-mono text-neutral-400" id="review-agent-target">Agent: Returns Manager</div>
+<div class="text-sm font-heading text-amber-200" id="review-reason">Barcode mismatch detected between physical sleeve and packing manifest.</div>
+</div>
+<div class="space-y-3 font-mono text-xs">
+<label class="block text-neutral-400 uppercase">Supervisor Resolution Decision</label>
+<div class="space-y-2">
+<label class="flex items-center space-x-3 text-neutral-200 cursor-pointer">
+<input checked="" class="text-brand-yellow focus:ring-0" name="override_action" type="radio" value="approve"/>
+<span class="">Force Approve (Physical Item Verified Manually)</span>
+</label>
+<label class="flex items-center space-x-3 text-neutral-200 cursor-pointer">
+<input class="text-brand-yellow focus:ring-0" name="override_action" type="radio" value="claim"/>
+<span class="">Trigger Agent 05 (File Immediate Discrepancy Claim)</span>
+</label>
+<label class="flex items-center space-x-3 text-neutral-200 cursor-pointer">
+<input class="text-brand-yellow focus:ring-0" name="override_action" type="radio" value="quarantine"/>
+<span class="">Move to Physical Quarantine Cage</span>
+</label>
+</div>
+</div>
+<div class="flex items-center justify-end space-x-3 pt-4 border-t border-brand-borderDark">
+<button class="px-5 py-2.5 rounded-full border border-neutral-700 text-xs font-heading font-bold uppercase hover:bg-neutral-800" onclick="toggleModal('review-modal')">Dismiss</button>
+<button class="pill-btn px-6 py-2.5 rounded-full bg-amber-400 text-black font-heading font-bold text-xs uppercase hover:bg-white transition-all" onclick="applyResolution()">Submit Cryptographic Override</button>
+</div>
+</div>
+</div>
+<!-- END: InteractiveModals -->
+<!-- BEGIN: InteractiveScripts -->
+<script data-purpose="command-center-interactivity">
+    // Helper to toggle modal visibility
+    function toggleModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.toggle('hidden');
+      }
+    }
+
+    // Open Passport Modal with dynamic unit info
+    function openPassportModal(unitId) {
+      document.getElementById('passport-unit-id').innerText = unitId;
+      document.getElementById('passport-timestamp').innerText = new Date().toISOString();
+      toggleModal('passport-modal');
+    }
+
+    // Open Exception Review Modal
+    function openReviewModal(unitId, agentName, reason) {
+      document.getElementById('review-title').innerText = 'Resolve ' + unitId;
+      document.getElementById('review-agent-target').innerText = 'Triggered By: ' + agentName;
+      document.getElementById('review-reason').innerText = reason;
+      toggleModal('review-modal');
+    }
+
+    // Handle Resolution submission
+    function applyResolution() {
+      alert('Supervisor override cryptographically signed and committed to the ledger.');
+      toggleModal('review-modal');
+    }
+
+    // Create New Test Unit Workflow
+    function handleCreateUnit(event) {
+      event.preventDefault();
+      const unitId = document.getElementById('unit-id-input').value;
+      const sku = document.getElementById('unit-sku-input').value;
+      const route = document.getElementById('unit-route-input').value;
+
+      alert(`Unit ${unitId} created and dispatched to Pipeline Stage 01 (Receiving Manager)!`);
+      toggleModal('new-unit-modal');
+    }
+
+    // Demo workflow simulation
+    function runSampleWorkflow() {
+      alert("Simulating inspection stream for UNIT-0014: Overhead cameras synchronized. Optical verification: 100%. Passport ready!");
+      openPassportModal('UNIT-0014');
+    }
+
+    // Export audit trigger
+    function triggerAuditReport() {
+      alert("Exporting Cryptographic Audit Dossier (SHA-256 verifiable package) for Org org_demo_alpha...");
+    }
+  </script>
+<!-- END: InteractiveScripts -->
+</body></html>

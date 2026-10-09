@@ -4,78 +4,111 @@ Evaluates polybag sealing, suffocation warnings, FNSKU placement, barcode covera
 expiry legibility, and physical scale measurements.
 """
 
-from shared.utils import sample_data
-from shared.utils.records import build_output, build_record, check
+import json
+from pathlib import Path
+
+from shared.utils.agent_context import resolve_row
+from shared.utils.records import build_output, build_record, check, pending_output, utcnow
 from shared.utils.server import make_app
-from shared.utils.stubs import photos, verdict_from
+from shared.utils.stubs import captures, previous, verdict_from
 from orchestration.db import save_evidence_db
 
 STAGE = "prep"
 AGENT_ID = "prep-agent@v1.0"
-MODEL_INFO = {"name": "prep-rule-vision-v1", "version": "1.0", "provider": "prep_engine", "calls": 1, "cost_usd": 0.001}
-RULES = [
-    ("polybag_sealed", "polybag_present_sealed", {"yes"}, {"not_sealed", "missing"}),
-    ("suffocation_warning", "suffocation_warning", {"legible"}, {"obscured_by_fold", "missing"}),
-    ("fnsku_label_placement", "fnsku_label_placement", {"flat"}, {"on_seam", "on_curve", "on_edge", "missing"}),
-    ("original_barcode_covered", "original_barcode_covered", {"yes"}, {"no"}),
-    ("expiry_legible", "expiry_date", {"legible"}, {"illegible_after_wrap"}),
-    ("handling_marks", "handling_marks", {"all_present"}, {"some_missing"}),
-]
+MODEL_INFO = {"name": "prep-requirements-rules-v1", "version": "1.0", "provider": "cube_rules", "calls": 0, "cost_usd": 0}
+RULES_PATH = Path(__file__).resolve().parents[2] / "data" / "prep_requirements.json"
+
+
+def load_requirements(category: str) -> tuple[str, list[dict]]:
+    requirements = json.loads(RULES_PATH.read_text(encoding="utf-8"))
+    rules = requirements.get("categories", {}).get(category)
+    if not isinstance(rules, list) or not rules:
+        raise LookupError(f"No authoritative prep requirements for category {category!r} in {RULES_PATH.name}")
+    return requirements["version"], rules
 
 
 def handle(request: dict) -> dict:
     s = request["subject"]
     subject_id = s.get("subject_id") or s.get("unit_id")
-    org_id = s.get("org_id", "org_demo_alpha")
+    r = resolve_row("prep", request)
 
+    input_records = captures(request, r)
+    refs = [p["ref"] for p in input_records] or ["img_prep_01.jpg"]
+    category = r.get("category", "general")
     try:
-        r = sample_data.row("prep", subject_id, org_id)
-    except LookupError:
-        if subject_id and (subject_id.startswith("UNIT-TEST") or subject_id.startswith("LIVE-") or subject_id.startswith("CUSTOM-") or "test" in subject_id.lower()):
-            r = {
-                "subject_id": subject_id,
-                "sku": s.get("sku", "SKU-CUSTOM-001"),
-                "work_order_id": f"WO-{subject_id}",
-                "fba_shipment_id": f"FBA-{subject_id}",
-                "fnsku": s.get("fnsku", f"X00{subject_id}"),
-                "polybag_present_sealed": s.get("polybag_present_sealed", "yes"),
-                "suffocation_warning": s.get("suffocation_warning", "legible"),
-                "fnsku_label_placement": s.get("fnsku_label_placement", "flat"),
-                "original_barcode_covered": s.get("original_barcode_covered", "yes"),
-                "expiry_date": s.get("expiry_date", "legible"),
-                "handling_marks": s.get("handling_marks", "all_present"),
-                "record_id": f"PRP-{subject_id}",
-                "operator_id": "OP-PRP-01",
-            }
-        else:
-            raise
+        rules_version, rules = load_requirements(category)
+    except LookupError as exc:
+        output = pending_output(request, code="prep_rules_unavailable", message=str(exc), retryable=False, agent_id=AGENT_ID)
+        save_evidence_db(output["evidence"])
+        return output
 
-    refs = [p["ref"] for p in photos(r)] if photos(r) else ["img_prep_01.jpg"]
-    checks = [
-        check(key, verdict_from(r.get(col, "yes"), ok, bad), None, expected=sorted(ok)[0], observed=r.get(col, "yes"),
-              evidence_refs=refs, uncertain_reason="poor_image")
-        for key, col, ok, bad in RULES if r.get(col) != "not_required"
-    ]
+    checks, rule_table = [], []
+    for rule in rules:
+        key, input_key = rule["check_key"], rule["input_key"]
+        observed = r.get(input_key, "yes")
+        if observed == "not_required":
+            rule_table.append({
+                "rule_id": key, "source": f"data/prep_requirements.json#{category}/{key}",
+                "status": "NOT_APPLICABLE", "observed": observed,
+            })
+            continue
+        if not rule.get("visually_checkable", False):
+            rule_table.append({
+                "rule_id": key, "source": f"data/prep_requirements.json#{category}/{key}",
+                "status": "NOT_CHECKABLE", "observed": observed,
+            })
+            continue
+        verdict = verdict_from(observed, set(rule["pass_values"]), set(rule["fail_values"]))
+        checks.append(check(
+            key, verdict, None, expected=rule["pass_values"], observed=observed,
+            detail=f"Requirement from data/prep_requirements.json#{category}/{key}",
+            evidence_refs=refs, uncertain_reason="poor_image",
+        ))
+        rule_table.append({
+            "rule_id": key, "source": f"data/prep_requirements.json#{category}/{key}",
+            "status": verdict, "expected": rule["pass_values"], "observed": observed,
+        })
+    receiving = previous(request, "receiving")
+    if receiving and receiving.get("status") == "completed":
+        identity_check = next(
+            (item for item in receiving.get("checks", []) if item.get("check_key") == "identity_match"),
+            None,
+        )
+        identity_verdict = identity_check.get("verdict", "UNCERTAIN") if identity_check else "UNCERTAIN"
+        if identity_verdict != "PASS":
+            checks.append(check(
+                "receiving_identity_baseline", identity_verdict, None,
+                expected="receiving identity confirmed",
+                observed=identity_check.get("observed") if identity_check else "identity check missing",
+                detail="Prep cannot be approved against an unresolved receiving identity.",
+                evidence_refs=[receiving["record_id"]],
+                uncertain_reason="conflicting_evidence",
+            ))
     verdict = "FAIL" if any(c["verdict"] == "FAIL" for c in checks) else (
         "UNCERTAIN" if any(c["verdict"] == "UNCERTAIN" for c in checks) or not checks else "PASS")
     outcome = {"PASS": "compliant", "FAIL": "non_compliant", "UNCERTAIN": "pending_review"}[verdict]
 
-    measurements = {"weight_oz": 14.2, "dimensions_in": [8.0, 5.0, 2.5]}
+    measurements = r.get("measurements") or {"weight_oz": 14.2, "dimensions_in": [8.0, 5.0, 2.5]}
 
     record = build_record(
         request, agent_id=AGENT_ID, record_id=r.get("record_id", f"PRP-{subject_id}"),
-        captured_at=r.get("captured_at"), operator_id=r.get("operator_id", "OP-PRP-01"),
+        captured_at=r.get("captured_at") or utcnow(), operator_id=r.get("operator_id", "OP-PRP-01"),
         refs={"work_order_id": r.get("work_order_id"), "fba_shipment_id": r.get("fba_shipment_id"),
               "sku": r.get("sku"), "asin": r.get("asin"), "fnsku": r.get("fnsku")},
-        checks=checks, outcome=outcome, verdict=verdict, model=MODEL_INFO, inputs=photos(r),
+        checks=checks, outcome=outcome, verdict=verdict, model=MODEL_INFO, inputs=input_records,
         reason=f"Prep inspection complete: {sum(c['verdict'] == 'FAIL' for c in checks)} failed check(s).",
-        payload={"prep_price_usd": float(r.get("prep_price_usd", 0.75)), "measurements": measurements, "vision_mode": "AI Vision"},
+        payload={
+            "prep_price_usd": float(r.get("prep_price_usd", 0.75)),
+            "measurements": measurements,
+            "rule_source": f"data/prep_requirements.json@{rules_version}",
+            "rule_by_rule": rule_table,
+            "checked_rule_ids": [item["rule_id"] for item in rule_table if item["status"] in {"PASS", "FAIL", "UNCERTAIN"}],
+            "not_checkable_rule_ids": [item["rule_id"] for item in rule_table if item["status"] == "NOT_CHECKABLE"],
+            "vision_mode": "rules with operator-entered observations",
+        },
     )
 
-    try:
-        save_evidence_db(record)
-    except Exception:
-        pass
+    save_evidence_db(record)
 
     return build_output(record)
 

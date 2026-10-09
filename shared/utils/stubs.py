@@ -23,6 +23,12 @@ def photos(row: dict) -> list[dict]:
     return [{"ref": p, "sha256": None, "kind": "image"} for p in row.get("photo_refs", "").split(";") if p]
 
 
+def captures(request: dict, row: dict) -> list[dict]:
+    """Prefer content-addressed request captures, retaining fixture refs for contract tests."""
+    supplied = request.get("inputs") or []
+    return supplied if supplied else photos(row)
+
+
 def previous(request: dict, stage: str) -> dict | None:
     """The latest earlier evidence record for a stage, or None."""
     found = [r for r in request.get("previous_evidence", []) if r["stage"] == stage]

@@ -51,7 +51,26 @@ def has(kind: str, unit_id: str, org_id: str) -> bool:
         return False
 
 
+def _unit_in_org(unit_id: str, org_id: str) -> bool:
+    if any(has(k, unit_id, org_id) for k in ("receiving", "prep", "pack", "returns")):
+        return True
+    return any(r["unit_id"] == unit_id and r["org_id"] == org_id for r in rows("fees"))
+
+
+def require_org_scope(unit_id: str, org_id: str) -> None:
+    """Refuse cross-tenant lookups: unit known under another org but not this one."""
+    if _unit_in_org(unit_id, org_id):
+        return
+    if any(r["unit_id"] == unit_id for r in rows("fees")):
+        raise LookupError(f"no fee lines for {unit_id} in {org_id}")
+    for kind in ("receiving", "prep", "pack", "returns"):
+        if any(r["unit_id"] == unit_id for r in rows(kind)):
+            raise LookupError(f"no {kind} record for {unit_id} in {org_id}")
+    raise LookupError(f"no records for {unit_id} in {org_id}")
+
+
 def fee_lines(unit_id: str, org_id: str) -> list[dict]:
+    require_org_scope(unit_id, org_id)
     return [r for r in rows("fees") if r["unit_id"] == unit_id and r["org_id"] == org_id]
 
 

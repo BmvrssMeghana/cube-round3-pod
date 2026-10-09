@@ -90,3 +90,158 @@ def test_agent_level_override_is_append_only(cases):
     assert new["checks"] == rec["checks"], "an override must never rewrite the original check"
     assert verify(new), "agent-level overrides sit outside the content hash"
     assert len(add_agent_override(new, by="op2", target="decision", new_verdict="PASS", reason="second look")["overrides"]) == 2
+
+
+def _run_local_agent(stage, case, previous, user_inputs):
+    from agents.pack import app as pack
+    from agents.prep import app as prep
+    from agents.receiving import app as receiving
+    from agents.recovery import app as recovery
+    from agents.returns import app as returns
+
+    agent = {
+        "receiving": receiving,
+        "prep": prep,
+        "pack": pack,
+        "returns": returns,
+        "recovery": recovery,
+    }[stage]
+    request = make_input(stage, case, previous)
+    request["context"]["user_inputs"] = user_inputs
+    return agent.handle(request)["evidence"]
+
+
+def _disable_evidence_writes(monkeypatch):
+    from agents.pack import app as pack
+    from agents.prep import app as prep
+    from agents.receiving import app as receiving
+    from agents.recovery import app as recovery
+    from agents.returns import app as returns
+
+    for agent in (receiving, prep, pack, returns, recovery):
+        monkeypatch.setattr(agent, "save_evidence_db", lambda record: None)
+
+
+@pytest.mark.parametrize("downstream", ["prep", "pack", "returns"])
+def test_receiving_identity_changes_each_outbound_decision(monkeypatch, cases, downstream):
+    _disable_evidence_writes(monkeypatch)
+    case = next(c for c in cases if c["unit_id"] == ("UNIT-0014" if downstream == "prep" else "UNIT-0016"))
+    receiving_inputs = {
+        "expected_qty": 48,
+        "observed_qty": 48,
+        "cartons_ordered": 4,
+        "cartons_received": 4,
+        "units_per_carton_ordered": 12,
+        "units_per_carton_counted": 12,
+        "carton_damage": "none",
+        "unit_damage": "none",
+        "quality_flags": "",
+    }
+    received = _run_local_agent("receiving", case, [], {**receiving_inputs, "identity_match": "yes"})
+    wrong_identity = _run_local_agent("receiving", case, [], {**receiving_inputs, "identity_match": "no"})
+
+    if downstream == "prep":
+        inputs = {
+            "polybag_present_sealed": "yes",
+            "suffocation_warning": "legible",
+            "fnsku_label_placement": "flat",
+            "original_barcode_covered": "yes",
+            "expiry_date": "legible",
+            "handling_marks": "all_present",
+        }
+        evidence_before = _run_local_agent(downstream, case, [received], inputs)
+        evidence_after = _run_local_agent(downstream, case, [wrong_identity], inputs)
+    elif downstream == "pack":
+        inputs = {"order_lines": "SKU-TEST:1", "observed_in_box": "SKU-TEST:1"}
+        evidence_before = _run_local_agent(downstream, case, [received], inputs)
+        evidence_after = _run_local_agent(downstream, case, [wrong_identity], inputs)
+    else:
+        pack_evidence = _run_local_agent("pack", case, [received], {
+            "order_lines": "SKU-TEST:1",
+            "observed_in_box": "SKU-TEST:1",
+        })
+        wrong_pack_evidence = _run_local_agent("pack", case, [wrong_identity], {
+            "order_lines": "SKU-TEST:1",
+            "observed_in_box": "SKU-TEST:1",
+        })
+        evidence_before = _run_local_agent("returns", case, [received, pack_evidence], {
+            "identity_match": "yes", "observed_state": "opened_good",
+        })
+        evidence_after = _run_local_agent("returns", case, [wrong_identity, wrong_pack_evidence], {
+            "identity_match": "yes", "observed_state": "opened_good",
+        })
+
+    assert evidence_before["decision"]["verdict"] == "PASS"
+    assert evidence_after["decision"]["verdict"] == "FAIL"
+    assert "receiving_identity_baseline" in {item["check_key"] for item in evidence_after["checks"]}
+
+
+def test_receiving_quantity_changes_recovery_lost_inbound_assessment(monkeypatch, cases):
+    _disable_evidence_writes(monkeypatch)
+    case = next(c for c in cases if c["unit_id"] == "UNIT-0014")
+    expected = _run_local_agent("receiving", case, [], {"expected_qty": 24, "observed_qty": 24})
+    short = _run_local_agent("receiving", case, [], {"expected_qty": 24, "observed_qty": 12})
+    charge = {"fee_lines": [{"line_id": "LOST-1", "charge_type": "lost_inbound", "amount_usd": 5}]}
+
+    fully_received = _run_local_agent("recovery", case, [expected], charge)
+    shortage_recorded = _run_local_agent("recovery", case, [short], charge)
+
+    assert fully_received["payload"]["charges"][0]["position"] == "CONTRADICTS"
+    assert shortage_recorded["payload"]["charges"][0]["position"] == "SUPPORTS"
+
+
+def test_pack_evidence_changes_returns_and_recovery_decisions(monkeypatch, cases):
+    _disable_evidence_writes(monkeypatch)
+    case = next(c for c in cases if c["unit_id"] == "UNIT-0016")
+    receiving = _run_local_agent("receiving", case, [], {
+        "identity_match": "yes",
+        "expected_qty": 48,
+        "observed_qty": 48,
+        "cartons_ordered": 4,
+        "cartons_received": 4,
+        "units_per_carton_ordered": 12,
+        "units_per_carton_counted": 12,
+        "carton_damage": "none",
+        "unit_damage": "none",
+        "quality_flags": "",
+    })
+    correct_pack = _run_local_agent("pack", case, [receiving], {
+        "order_lines": "SKU-TEST:1",
+        "observed_in_box": "SKU-TEST:1",
+    })
+    wrong_pack = _run_local_agent("pack", case, [receiving], {
+        "order_lines": "SKU-TEST:1",
+        "observed_in_box": "SKU-WRONG:1",
+    })
+    return_before = _run_local_agent("returns", case, [receiving, correct_pack], {
+        "identity_match": "yes", "observed_state": "opened_good",
+    })
+    return_after = _run_local_agent("returns", case, [receiving, wrong_pack], {
+        "identity_match": "yes", "observed_state": "opened_good",
+    })
+    misship_charge = {"fee_lines": [{"line_id": "SHIP-1", "charge_type": "misship_refund", "amount_usd": 5}]}
+    recovery_before = _run_local_agent("recovery", case, [correct_pack], misship_charge)
+    recovery_after = _run_local_agent("recovery", case, [wrong_pack], misship_charge)
+
+    assert return_before["decision"]["verdict"] == "PASS"
+    assert return_after["decision"]["verdict"] == "UNCERTAIN"
+    assert recovery_before["payload"]["charges"][0]["position"] == "CONTRADICTS"
+    assert recovery_after["payload"]["charges"][0]["position"] == "SUPPORTS"
+
+
+def test_returns_identity_changes_recovery_assessment(monkeypatch, cases):
+    _disable_evidence_writes(monkeypatch)
+    case = next(c for c in cases if c["unit_id"] == "UNIT-0016")
+    returned = _run_local_agent("returns", case, [], {"identity_match": "yes"})
+    wrong_item = _run_local_agent("returns", case, [], {"identity_match": "no"})
+    charge = {"fee_lines": [{
+        "line_id": "RETURN-1",
+        "charge_type": "refund_issued_item_not_returned",
+        "amount_usd": 5,
+    }]}
+
+    confirmed = _run_local_agent("recovery", case, [returned], charge)
+    wrong = _run_local_agent("recovery", case, [wrong_item], charge)
+
+    assert confirmed["payload"]["charges"][0]["position"] == "CONTRADICTS"
+    assert wrong["payload"]["charges"][0]["position"] == "SILENT"

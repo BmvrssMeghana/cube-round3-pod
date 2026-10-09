@@ -18,6 +18,7 @@ def cases():
 def inproc_by_default(monkeypatch):
     """Tests run in-process unless a test opts into HTTP. Remove this if all your agents are HTTP-only."""
     monkeypatch.setenv("ORCH_MODE", "inproc")
+    monkeypatch.setenv("USE_SAMPLE_DATA", "1")
 
 
 def applies(stage: str, case: dict) -> bool:

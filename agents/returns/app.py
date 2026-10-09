@@ -4,80 +4,86 @@ Evaluates returned items for SKU identity match, parts completeness, Amazon cond
 disposition (restock / refurbish / liquidate / dispose), and sends evidence downstream for Recovery.
 """
 
-from shared.utils import sample_data
-from shared.utils.records import build_output, build_record, check
+from shared.utils.agent_context import resolve_row
+from shared.utils.records import build_output, build_record, check, utcnow
 from shared.utils.server import make_app
-from shared.utils.stubs import photos, previous, verdict_from
+from shared.utils.stubs import captures, previous, verdict_from
 from orchestration.db import save_evidence_db
 
 from .ai_return_engine import ReturnManagerEngine
 
 STAGE = "returns"
 AGENT_ID = "returns-agent@v1.0"
-MODEL_INFO = {"name": "gemini-2.0-flash-returns", "version": "1.0", "provider": "google", "calls": 1, "cost_usd": 0.002}
+MODEL_INFO = {"name": "returns-condition-rules-v1", "version": "1.0", "provider": "cube_rules", "calls": 0, "cost_usd": 0}
 
 
 def handle(request: dict) -> dict:
     s = request["subject"]
     subject_id = s.get("subject_id") or s.get("unit_id")
-    org_id = s.get("org_id", "org_demo_alpha")
+    r = resolve_row("returns", request)
 
-    try:
-        r = sample_data.row("returns", subject_id, org_id)
-    except LookupError:
-        if subject_id and (subject_id.startswith("UNIT-TEST") or subject_id.startswith("LIVE-") or subject_id.startswith("CUSTOM-") or "test" in subject_id.lower()):
-            sku = s.get("sku", "SKU-CUSTOM-001")
-            r = {
-                "subject_id": subject_id,
-                "order_id": f"ORD-{subject_id}",
-                "ordered_sku": sku,
-                "ordered_asin": s.get("asin", f"B00{subject_id}"),
-                "identity_match": s.get("identity_match", "yes"),
-                "parts_list": s.get("parts_list", "unit;cable;manual"),
-                "parts_missing": s.get("parts_missing", ""),
-                "observed_state": s.get("observed_state", "factory_sealed"),
-                "operator_disposition": s.get("disposition", "restock"),
-                "record_id": f"RTN-{subject_id}",
-                "operator_id": "OP-RTN-01",
-            }
-        else:
-            raise
-
-    refs = [p["ref"] for p in photos(r)] if photos(r) else ["img_return_01.jpg"]
-    missing = [p for p in r.get("parts_missing", "").split(";") if p]
+    input_records = captures(request, r)
+    refs = [p["ref"] for p in input_records] or ["img_return_01.jpg"]
+    raw_missing = r.get("parts_missing", "")
+    missing = [part for part in raw_missing.split(";") if part] if isinstance(raw_missing, str) else list(raw_missing or [])
+    returned_sku = r.get("returned_sku", r.get("ordered_sku", "SKU-001"))
     checks = [
         check("identity_match", verdict_from(r.get("identity_match", "yes"), {"yes"}, {"no"}), None,
-              expected=r.get("ordered_sku"), observed=r.get("identity_match"), evidence_refs=refs, uncertain_reason="poor_image"),
+              expected=r.get("ordered_sku"), observed=returned_sku, evidence_refs=refs, uncertain_reason="poor_image"),
         check("completeness", "FAIL" if missing else "PASS", None, expected=r.get("parts_list", "").split(";"),
               observed={"missing": missing}, evidence_refs=refs),
     ]
-    verdict = "FAIL" if any(c["verdict"] == "FAIL" for c in checks) else (
-        "UNCERTAIN" if any(c["verdict"] == "UNCERTAIN" for c in checks)
-        or r.get("operator_disposition") == "pending_review" else "PASS")
-    outcome = r.get("operator_disposition", "restock")
-
+    receiving = previous(request, "receiving")
+    if receiving and receiving.get("status") == "completed":
+        identity_check = next(
+            (item for item in receiving.get("checks", []) if item.get("check_key") == "identity_match"),
+            None,
+        )
+        identity_verdict = identity_check.get("verdict", "UNCERTAIN") if identity_check else "UNCERTAIN"
+        if identity_verdict != "PASS":
+            checks.append(check(
+                "receiving_identity_baseline", identity_verdict, None,
+                expected="receiving identity confirmed",
+                observed=identity_check.get("observed") if identity_check else "identity check missing",
+                detail="The return identity cannot be cleared against unresolved receiving evidence.",
+                evidence_refs=[receiving["record_id"]],
+                uncertain_reason="conflicting_evidence",
+            ))
+    for source_stage in ("prep", "pack"):
+        outbound = previous(request, source_stage)
+        if outbound and outbound.get("status") == "completed" and outbound["decision"]["verdict"] != "PASS":
+            checks.append(check(
+                f"{source_stage}_outbound_baseline", "UNCERTAIN", None,
+                expected=f"{source_stage} evidence cleared before shipment",
+                observed=outbound["decision"]["verdict"],
+                detail="Earlier outbound evidence requires review before the return can be restocked.",
+                evidence_refs=[outbound["record_id"]],
+                uncertain_reason="conflicting_evidence",
+            ))
     cond_res = ReturnManagerEngine.evaluate_return(
-        returned_sku=r.get("ordered_sku", "SKU-001"),
+        returned_sku=returned_sku,
         expected_sku=r.get("ordered_sku", "SKU-001"),
         observed_state=r.get("observed_state", "factory_sealed"),
         missing_parts=missing,
     )
+    verdict = "FAIL" if any(c["verdict"] == "FAIL" for c in checks) else (
+        "UNCERTAIN" if any(c["verdict"] == "UNCERTAIN" for c in checks)
+        or cond_res["disposition"] == "pending_review" else "PASS")
+    outcome = "pending_review" if verdict != "PASS" else cond_res["disposition"]
 
     record = build_record(
         request, agent_id=AGENT_ID, record_id=r.get("record_id", f"RTN-{subject_id}"),
-        captured_at=r.get("captured_at"), operator_id=r.get("operator_id", "OP-RTN-01"),
+        captured_at=r.get("captured_at") or utcnow(), operator_id=r.get("operator_id", "OP-RTN-01"),
         refs={"order_id": r.get("order_id"), "sku": r.get("ordered_sku"), "asin": r.get("ordered_asin")},
-        checks=checks, outcome=outcome, verdict=verdict, model=MODEL_INFO, inputs=photos(r),
+        checks=checks, outcome=outcome, verdict=verdict, model=MODEL_INFO, inputs=input_records,
         reason=f"Returns evaluation completed: disposition={outcome}, amazon_condition={cond_res['amazon_condition']}",
         payload={"observed_state": r.get("observed_state"), "condition_graded": True,
                  "amazon_condition": cond_res["amazon_condition"], "value_recovery_ratio": cond_res["value_recovery_ratio"],
-                 "sent_contents_seen": previous(request, "pack") is not None, "vision_mode": "AI Vision"},
+                 "sent_contents_seen": previous(request, "pack") is not None,
+                 "vision_mode": "rules with operator-entered observations"},
     )
 
-    try:
-        save_evidence_db(record)
-    except Exception:
-        pass
+    save_evidence_db(record)
 
     return build_output(record)
 

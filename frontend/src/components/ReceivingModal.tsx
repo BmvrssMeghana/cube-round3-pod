@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { CaptureChecklist } from './CaptureChecklist';
+import type { CaptureAttachment } from './CaptureChecklist';
 
 interface ReceivingModalProps {
   unitId: string;
   onClose: () => void;
-  onRunInspection: (unitId: string, payload: any) => Promise<void>;
+  onRunInspection: (unitId: string, payload: any) => Promise<any>;
 }
 
 export const ReceivingModal: React.FC<ReceivingModalProps> = ({ unitId, onClose, onRunInspection }) => {
@@ -12,93 +14,283 @@ export const ReceivingModal: React.FC<ReceivingModalProps> = ({ unitId, onClose,
   const [observedQty, setObservedQty] = useState(24);
   const [variant, setVariant] = useState('Blue');
   const [damage, setDamage] = useState('none');
+  const [observedVariant, setObservedVariant] = useState('Blue');
+  const [cartonsExpected, setCartonsExpected] = useState(1);
+  const [cartonsReceived, setCartonsReceived] = useState(1);
+  const [unitsPerCartonExpected, setUnitsPerCartonExpected] = useState(24);
+  const [unitsPerCartonCounted, setUnitsPerCartonCounted] = useState(24);
+  const [identityMatch, setIdentityMatch] = useState('yes');
+  const [unitDamage, setUnitDamage] = useState('none');
+  const [operatorLabel, setOperatorLabel] = useState('');
+  const [captures, setCaptures] = useState<CaptureAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState('');
 
   const handleRun = async () => {
     setLoading(true);
     const payload = {
       sku,
       expected_qty: expectedQty,
-      qty_received: observedQty,
-      variant,
-      damage,
+      observed_qty: observedQty,
+      expected_variant: variant,
+      observed_variant: observedVariant,
+      cartons_ordered: cartonsExpected,
+      cartons_received: cartonsReceived,
+      units_per_carton_ordered: unitsPerCartonExpected,
+      units_per_carton_counted: unitsPerCartonCounted,
+      identity_match: identityMatch,
+      carton_damage: damage,
+      unit_damage: unitDamage,
+      operator_label: operatorLabel,
+      captures,
     };
     try {
+      setError('');
       const res = await onRunInspection(unitId, payload);
       setResult(res);
-    } catch (e) {
-      console.error(e);
+    } catch (runError) {
+      setError(runError instanceof Error ? runError.message : 'Receiving inspection failed.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '700px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 800 }}>📦 Receiving Manager AI Inspection</h3>
-          <button className="btn btn-secondary" style={{ padding: '4px 8px' }} onClick={onClose}>✕</button>
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-brand-card border-2 border-brand-yellow rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto text-[var(--text-primary)]">
+        <div className="flex items-center justify-between border-b border-brand-border pb-4">
+          <div>
+            <span className="text-[10px] font-poppins text-brand-yellow uppercase tracking-widest block font-bold">
+              AGENT 01 · RECEIVING MANAGER
+            </span>
+            <h3 className="font-syne font-extrabold text-xl sm:text-2xl uppercase tracking-tight text-[var(--text-primary)] mt-1">
+              Inbound Dock Inspection
+            </h3>
+          </div>
+          <button className="text-neutral-400 hover:text-[var(--text-primary)] text-2xl font-bold font-poppins" onClick={onClose}>
+            ×
+          </button>
         </div>
 
-        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Target Unit: <strong>{unitId}</strong> — Runs Gemini/OpenAI vision inspection & PO quantity comparison.
-        </div>
+        <p className="text-xs font-poppins text-brand-muted">
+          Target Unit: <strong className="text-[var(--text-primary)]">{unitId}</strong> — Record PO, identity match, carton count, and damage evidence.
+        </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Expected SKU:</label>
-            <input type="text" value={sku} onChange={(e) => setSku(e.target.value)} style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '6px', color: 'var(--text-primary)' }} />
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Expected SKU</label>
+            <input
+              type="text"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+            />
           </div>
+
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Expected Quantity:</label>
-            <input type="number" value={expectedQty} onChange={(e) => setExpectedQty(parseInt(e.target.value) || 0)} style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '6px', color: 'var(--text-primary)' }} />
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Expected Quantity</label>
+            <input
+              type="number"
+              value={expectedQty}
+              onChange={(e) => setExpectedQty(parseInt(e.target.value) || 0)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+            />
           </div>
+
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Observed Received Quantity:</label>
-            <input type="number" value={observedQty} onChange={(e) => setObservedQty(parseInt(e.target.value) || 0)} style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '6px', color: 'var(--text-primary)' }} />
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Observed Quantity</label>
+            <input
+              type="number"
+              min="0"
+              value={observedQty}
+              onChange={(e) => setObservedQty(parseInt(e.target.value, 10) || 0)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+            />
           </div>
+
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Observed Carton Damage:</label>
-            <select value={damage} onChange={(e) => setDamage(e.target.value)} style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-light)', borderRadius: '6px', color: 'var(--text-primary)' }}>
-              <option value="none">None (Undamaged)</option>
-              <option value="crushing">Crushing / Corner dent</option>
-              <option value="water">Water / Liquid damage</option>
-              <option value="tears">Tears / Puncture</option>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Expected Variant</label>
+            <input
+              type="text"
+              value={variant}
+              onChange={(e) => setVariant(e.target.value)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Observed Variant</label>
+            <input
+              type="text"
+              value={observedVariant}
+              onChange={(e) => setObservedVariant(e.target.value)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Expected / Received Cartons</label>
+            <div className="flex gap-2">
+              <input
+                aria-label="Expected cartons"
+                type="number"
+                min="0"
+                value={cartonsExpected}
+                onChange={(e) => setCartonsExpected(parseInt(e.target.value, 10) || 0)}
+                className="w-1/2 bg-brand-surface border border-brand-border rounded-xl px-3 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+              />
+              <input
+                aria-label="Received cartons"
+                type="number"
+                min="0"
+                value={cartonsReceived}
+                onChange={(e) => setCartonsReceived(parseInt(e.target.value, 10) || 0)}
+                className="w-1/2 bg-brand-surface border border-brand-border rounded-xl px-3 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Units / Carton (Exp / Counted)</label>
+            <div className="flex gap-2">
+              <input
+                aria-label="Expected units per carton"
+                type="number"
+                min="0"
+                value={unitsPerCartonExpected}
+                onChange={(e) => setUnitsPerCartonExpected(parseInt(e.target.value, 10) || 0)}
+                className="w-1/2 bg-brand-surface border border-brand-border rounded-xl px-3 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+              />
+              <input
+                aria-label="Counted units per carton"
+                type="number"
+                min="0"
+                value={unitsPerCartonCounted}
+                onChange={(e) => setUnitsPerCartonCounted(parseInt(e.target.value, 10) || 0)}
+                className="w-1/2 bg-brand-surface border border-brand-border rounded-xl px-3 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">SKU / ASIN Identity</label>
+            <select
+              value={identityMatch}
+              onChange={(e) => setIdentityMatch(e.target.value)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow cursor-pointer"
+            >
+              <option value="yes" className="bg-brand-surface text-[var(--text-primary)]">Matches purchase order</option>
+              <option value="no" className="bg-brand-surface text-[var(--text-primary)]">Does not match</option>
+              <option value="uncertain" className="bg-brand-surface text-[var(--text-primary)]">Unreadable / uncertain</option>
             </select>
           </div>
+
+          <div>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Carton Damage</label>
+            <select
+              value={damage}
+              onChange={(e) => setDamage(e.target.value)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow cursor-pointer"
+            >
+              <option value="none" className="bg-brand-surface text-[var(--text-primary)]">None (Undamaged)</option>
+              <option value="crushing" className="bg-brand-surface text-[var(--text-primary)]">Crushing / Corner dent</option>
+              <option value="water" className="bg-brand-surface text-[var(--text-primary)]">Water / Liquid damage</option>
+              <option value="tears" className="bg-brand-surface text-[var(--text-primary)]">Tears / Puncture</option>
+              <option value="uncertain" className="bg-brand-surface text-[var(--text-primary)]">Area not visible / uncertain</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Unit Damage</label>
+            <select
+              value={unitDamage}
+              onChange={(e) => setUnitDamage(e.target.value)}
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow cursor-pointer"
+            >
+              <option value="none" className="bg-brand-surface text-[var(--text-primary)]">None</option>
+              <option value="crushing" className="bg-brand-surface text-[var(--text-primary)]">Crushed</option>
+              <option value="water" className="bg-brand-surface text-[var(--text-primary)]">Water damaged</option>
+              <option value="tears" className="bg-brand-surface text-[var(--text-primary)]">Torn / punctured</option>
+              <option value="uncertain" className="bg-brand-surface text-[var(--text-primary)]">Not fully visible</option>
+            </select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-poppins uppercase text-brand-muted mb-1 font-bold">Operator Label / Station ID</label>
+            <input
+              type="text"
+              value={operatorLabel}
+              onChange={(e) => setOperatorLabel(e.target.value)}
+              placeholder="e.g. DOCK-04 / Operator J. Smith"
+              className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-xs font-poppins text-[var(--text-primary)] focus:outline-none focus:border-brand-yellow"
+            />
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleRun} disabled={loading}>
-            {loading ? '⚡ Running Receiving AI Vision Inspection...' : '▶ Run Receiving Inspection'}
+        <CaptureChecklist
+          requiredShots={['Carton exterior', 'PO / SKU label', 'Product and variant', 'Damage close-up']}
+          value={captures}
+          onChange={setCaptures}
+        />
+
+        {error && <p className="font-poppins text-xs text-brand-crimson">{error}</p>}
+
+        <div className="pt-4 flex items-center justify-end space-x-3 border-t border-brand-border">
+          <button
+            type="button"
+            className="px-5 py-2.5 rounded-full border border-neutral-700 text-xs font-heading font-bold uppercase hover:bg-neutral-800 text-[var(--text-primary)]"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleRun}
+            disabled={loading || captures.length < 4 || !sku.trim() || expectedQty < 1}
+            className="pill-btn px-6 py-2.5 rounded-full bg-brand-yellow text-black font-heading font-extrabold text-xs uppercase hover:bg-white transition-all shadow-md"
+          >
+            {loading ? 'Evaluating Evidence…' : 'Run Receiving Inspection'}
           </button>
         </div>
 
         {result && (
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-glow)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <span style={{ fontWeight: 800, fontSize: '14px' }}>Inspection Result ({result.evidence?.record_id})</span>
-              <span style={{ fontWeight: 800, padding: '4px 10px', borderRadius: '4px', background: result.evidence?.decision?.verdict === 'PASS' ? 'var(--color-pass-bg)' : 'var(--color-fail-bg)', color: result.evidence?.decision?.verdict === 'PASS' ? 'var(--color-pass)' : 'var(--color-fail)' }}>
+          <div className="p-4 rounded-2xl bg-brand-surface border border-brand-yellow/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-syne font-bold text-sm text-[var(--text-primary)]">
+                Receiving Result ({result.evidence?.record_id})
+              </span>
+              <span
+                className={`font-poppins text-xs font-bold px-3 py-1 rounded-full ${
+                  result.evidence?.decision?.verdict === 'PASS'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-brand-crimson/20 text-brand-crimson border border-brand-crimson/30'
+                }`}
+              >
                 {result.evidence?.decision?.verdict}
               </span>
             </div>
 
-            <div style={{ fontSize: '13px', marginBottom: '12px', color: 'var(--text-secondary)' }}>
-              {result.evidence?.decision?.reason}
-            </div>
+            <p className="text-xs text-brand-muted font-poppins">{result.evidence?.decision?.reason}</p>
 
-            <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>
-              Granular AI Checks
+            <div className="space-y-1 pt-2">
+              <span className="font-poppins text-[10px] uppercase font-bold text-brand-muted tracking-wider block">
+                Granular Checks ({result.evidence?.checks?.length || 0})
+              </span>
+              {result.evidence?.checks?.map((c: any, i: number) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between text-xs font-poppins p-2 rounded-lg bg-brand-card border border-brand-border"
+                >
+                  <span className="text-[var(--text-secondary)]">
+                    {c.check_key} (Exp: {String(c.expected ?? 'N/A')} | Obs: {String(c.observed ?? 'N/A')})
+                  </span>
+                  <strong className={c.verdict === 'PASS' ? 'text-emerald-400' : 'text-brand-crimson'}>
+                    {c.verdict}
+                  </strong>
+                </div>
+              ))}
             </div>
-
-            {result.evidence?.checks?.map((c: any, i: number) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '4px', marginBottom: '4px' }}>
-                <span>{c.check_key} (Expected: {String(c.expected ?? 'N/A')} | Observed: {String(c.observed ?? 'N/A')})</span>
-                <strong style={{ color: c.verdict === 'PASS' ? 'var(--color-pass)' : 'var(--color-fail)' }}>{c.verdict}</strong>
-              </div>
-            ))}
           </div>
         )}
       </div>

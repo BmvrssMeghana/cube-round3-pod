@@ -1,0 +1,49 @@
+{
+  "version": "1.0",
+  "categories": {
+    "general": [
+      {
+        "check_key": "polybag_sealed",
+        "input_key": "polybag_present_sealed",
+        "pass_values": ["yes"],
+        "fail_values": ["not_sealed", "missing"],
+        "visually_checkable": true
+      },
+      {
+        "check_key": "suffocation_warning",
+        "input_key": "suffocation_warning",
+        "pass_values": ["legible"],
+        "fail_values": ["obscured_by_fold", "missing"],
+        "visually_checkable": true
+      },
+      {
+        "check_key": "fnsku_label_placement",
+        "input_key": "fnsku_label_placement",
+        "pass_values": ["flat"],
+        "fail_values": ["on_seam", "on_curve", "on_edge", "missing"],
+        "visually_checkable": true
+      },
+      {
+        "check_key": "original_barcode_covered",
+        "input_key": "original_barcode_covered",
+        "pass_values": ["yes"],
+        "fail_values": ["no"],
+        "visually_checkable": true
+      },
+      {
+        "check_key": "expiry_legible",
+        "input_key": "expiry_date",
+        "pass_values": ["legible"],
+        "fail_values": ["illegible_after_wrap"],
+        "visually_checkable": true
+      },
+      {
+        "check_key": "handling_marks",
+        "input_key": "handling_marks",
+        "pass_values": ["all_present"],
+        "fail_values": ["some_missing"],
+        "visually_checkable": true
+      }
+    ]
+  }
+}

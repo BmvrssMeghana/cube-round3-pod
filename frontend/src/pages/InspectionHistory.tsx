@@ -100,10 +100,10 @@ export default function InspectionHistory({ org, onNavigate }: HistoryProps) {
                 const evidenceIssues = insp.images.filter(i => i.quality_status !== 'ok').length;
                 return (
                   <tr key={insp.id} style={{ cursor: 'pointer' }} onClick={() => onNavigate('inspection-detail', { id: insp.id })}>
-                    <td className="td-mono" style={{ color: 'var(--accent)' }}>{insp.record_id}</td>
-                    <td className="td-mono">{insp.unit_id}</td>
+                    <td className="td-syne" style={{ color: 'var(--accent)' }}>{insp.record_id}</td>
+                    <td className="td-syne">{insp.unit_id}</td>
                     <td style={{ fontSize: '12px' }}>{insp.sku}</td>
-                    <td className="td-mono">{insp.shipment_id}</td>
+                    <td className="td-syne">{insp.shipment_id}</td>
                     <td style={{ fontSize: '11px', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
                       {format(new Date(insp.created_at), 'MMM d, HH:mm')}
                     </td>

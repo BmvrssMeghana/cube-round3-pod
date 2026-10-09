@@ -1,46 +1,50 @@
 import React, { useState } from 'react';
-import { WorkflowState, EvidenceRecord } from '../types';
+import type { WorkflowState, EvidenceRecord } from '../types';
 import { UnitPassportCard } from '../components/UnitPassportCard';
 import { HumanReviewModal } from '../components/HumanReviewModal';
 
 interface UnitPassportPageProps {
-  selectedUnitId: string;
+  unitId: string;
   workflows: WorkflowState[];
   evidence: Record<string, EvidenceRecord>;
-  onSelectUnit: (unitId: string) => void;
-  onSubmitOverride: (recordId: string, newVerdict: any, actor: string, reason: string) => void;
 }
 
 export const UnitPassportPage: React.FC<UnitPassportPageProps> = ({
-  selectedUnitId,
+  unitId,
   workflows,
   evidence,
-  onSelectUnit,
-  onSubmitOverride,
 }) => {
+  const [selectedUnitId, setSelectedUnitId] = useState<string>(unitId);
   const [overrideRecordId, setOverrideRecordId] = useState<string | null>(null);
-  const currentWorkflow = workflows.find((w) => w.subject_id === selectedUnitId) || workflows[0];
+
+  const currentWorkflow = workflows.find((w) => w.subject_id === (selectedUnitId || unitId)) || workflows[0];
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-brand-border">
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800 }}>Unit Passport Inspector</h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Inspect continuous digital lifecycle identity and evidence chain for physical units.
+          <span className="font-poppins text-[10px] text-brand-yellow uppercase tracking-widest font-semibold block mb-1">
+            DIGITAL PROVENANCE LEDGER
+          </span>
+          <h2 className="font-syne font-extrabold text-2xl sm:text-3xl tracking-tight text-white">
+            Unit Passport Inspector
+          </h2>
+          <p className="font-poppins text-xs text-brand-muted mt-1">
+            Inspect continuous digital lifecycle identity and cryptographic evidence chain for physical units.
           </p>
         </div>
 
-        {/* Unit Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)' }}>Select Unit:</label>
+        {/* Unit Selector */}
+        <div className="flex items-center gap-2 font-poppins text-xs">
+          <label className="text-brand-muted uppercase font-bold">Select Unit:</label>
           <select
-            value={currentWorkflow.subject_id}
-            onChange={(e) => onSelectUnit(e.target.value)}
-            style={{ padding: '8px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-light)', borderRadius: '6px', color: '#fff', fontWeight: 700 }}
+            value={currentWorkflow?.subject_id || ''}
+            onChange={(e) => setSelectedUnitId(e.target.value)}
+            className="bg-brand-surface border border-brand-border text-white rounded-full px-4 py-1.5 font-poppins text-xs focus:outline-none focus:border-brand-yellow cursor-pointer"
           >
             {workflows.map((w) => (
-              <option key={w.subject_id} value={w.subject_id}>
+              <option key={w.subject_id} value={w.subject_id} className="bg-brand-surface">
                 {w.subject_id} ({w.status})
               </option>
             ))}
@@ -48,18 +52,25 @@ export const UnitPassportPage: React.FC<UnitPassportPageProps> = ({
         </div>
       </div>
 
-      <UnitPassportCard
-        workflow={currentWorkflow}
-        evidence={evidence}
-        onOpenOverride={(recordId) => setOverrideRecordId(recordId)}
-      />
+      {/* Main Passport Card */}
+      {currentWorkflow ? (
+        <UnitPassportCard
+          workflow={currentWorkflow}
+          evidence={evidence}
+          onOpenOverride={(recordId) => setOverrideRecordId(recordId)}
+        />
+      ) : (
+        <div className="p-12 text-center bg-brand-card border border-brand-border rounded-2xl text-brand-muted font-poppins text-sm">
+          No workflow records found. Create a unit workflow first.
+        </div>
+      )}
 
-      {overrideRecordId && (
+      {overrideRecordId && currentWorkflow && (
         <HumanReviewModal
           unitId={currentWorkflow.subject_id}
           recordId={overrideRecordId}
           onClose={() => setOverrideRecordId(null)}
-          onSubmitOverride={onSubmitOverride}
+          onSubmitOverride={() => setOverrideRecordId(null)}
         />
       )}
     </div>

@@ -9,8 +9,10 @@ class ReturnManagerEngine:
     AMAZON_CONDITIONS = {
         "factory_sealed": {"grade": "New", "disposition": "restock", "value_recovery": 1.0},
         "opened_good": {"grade": "Used - Like New", "disposition": "restock", "value_recovery": 0.85},
+        "signs_of_use": {"grade": "Used - Good", "disposition": "liquidate", "value_recovery": 0.60},
         "damaged_box": {"grade": "Used - Very Good", "disposition": "refurbish", "value_recovery": 0.70},
         "item_damaged": {"grade": "Unsellable", "disposition": "liquidate", "value_recovery": 0.30},
+        "damaged": {"grade": "Unsellable", "disposition": "liquidate", "value_recovery": 0.30},
         "defective": {"grade": "Unsellable", "disposition": "dispose", "value_recovery": 0.0},
     }
 

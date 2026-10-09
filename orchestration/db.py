@@ -50,19 +50,69 @@ def init_db():
         )
         """)
 
-        # Units table
+        # Units table (org-scoped; attributes holds stage-specific fields as JSON)
         cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS units (
-            unit_id {text_type} PRIMARY KEY,
+            unit_id {text_type} NOT NULL,
+            org_id {text_type} NOT NULL DEFAULT 'org_demo_alpha',
             sku {text_type} NOT NULL,
             expected_quantity INTEGER DEFAULT 1,
             variant {text_type},
             fnsku {text_type},
             order_id {text_type},
             customer_id {text_type},
-            created_at {timestamp_type}
+            channel {text_type} DEFAULT 'fba',
+            is_returned BOOLEAN DEFAULT FALSE,
+            attributes {json_type},
+            created_at {timestamp_type},
+            PRIMARY KEY (org_id, unit_id)
         )
         """)
+
+        # Auto-migration check for SQLite database files
+        if not is_postgres:
+            cursor.execute("PRAGMA table_info(units)")
+            cols = {col[1] for col in cursor.fetchall()}
+            if cols:
+                expected_units_cols = {
+                    "org_id": "TEXT DEFAULT 'org_demo_alpha'",
+                    "sku": "TEXT DEFAULT ''",
+                    "expected_quantity": "INTEGER DEFAULT 1",
+                    "variant": "TEXT",
+                    "fnsku": "TEXT",
+                    "order_id": "TEXT",
+                    "customer_id": "TEXT",
+                    "channel": "TEXT DEFAULT 'fba'",
+                    "is_returned": "BOOLEAN DEFAULT 0",
+                    "attributes": "TEXT",
+                    "created_at": "TEXT",
+                }
+                for col_name, col_def in expected_units_cols.items():
+                    if col_name not in cols:
+                        try:
+                            cursor.execute(f"ALTER TABLE units ADD COLUMN {col_name} {col_def}")
+                        except Exception:
+                            pass
+
+            cursor.execute("PRAGMA table_info(workflows)")
+            wf_cols = {col[1] for col in cursor.fetchall()}
+            if wf_cols:
+                expected_wf_cols = {
+                    "org_id": "TEXT DEFAULT 'org_demo_alpha'",
+                    "subject_id": "TEXT DEFAULT ''",
+                    "route": "TEXT DEFAULT 'fba'",
+                    "current_stage": "TEXT DEFAULT 'receiving'",
+                    "status": "TEXT DEFAULT 'PENDING'",
+                    "final_outcome": "TEXT",
+                    "created_at": "TEXT",
+                    "updated_at": "TEXT",
+                }
+                for col_name, col_def in expected_wf_cols.items():
+                    if col_name not in wf_cols:
+                        try:
+                            cursor.execute(f"ALTER TABLE workflows ADD COLUMN {col_name} {col_def}")
+                        except Exception:
+                            pass
 
         # Captures / Images table
         cursor.execute(f"""
@@ -144,6 +194,14 @@ def init_db():
         )
         """)
 
+        cursor.execute(f"""
+        CREATE TABLE IF NOT EXISTS organizations (
+            org_id {text_type} PRIMARY KEY,
+            name {text_type} NOT NULL,
+            created_at {timestamp_type}
+        )
+        """)
+
         # Human Reviews & Audit Logs table
         cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS human_reviews (
@@ -164,19 +222,92 @@ def init_db():
 
 # Helper Functions for DB Queries & Updates
 
-def save_unit_db(unit_id: str, sku: str, expected_quantity: int = 1, variant: Optional[str] = None, fnsku: Optional[str] = None, order_id: Optional[str] = None):
+def save_unit_db(
+    unit_id: str,
+    sku: str,
+    expected_quantity: int = 1,
+    variant: Optional[str] = None,
+    fnsku: Optional[str] = None,
+    order_id: Optional[str] = None,
+    org_id: str = "org_demo_alpha",
+    channel: str = "fba",
+    is_returned: bool = False,
+    attributes: Optional[Dict[str, Any]] = None,
+):
     conn = get_connection()
     now = datetime.now(timezone.utc).isoformat()
+    attrs_json = json.dumps(attributes or {})
+    is_pg = isinstance(conn, psycopg2.extensions.connection)
     with conn:
         cursor = conn.cursor()
-        cursor.execute("""
-        INSERT INTO units (unit_id, sku, expected_quantity, variant, fnsku, order_id, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT(unit_id) DO UPDATE SET sku=EXCLUDED.sku, expected_quantity=EXCLUDED.expected_quantity
-        """ if isinstance(conn, psycopg2.extensions.connection) else """
-        INSERT OR REPLACE INTO units (unit_id, sku, expected_quantity, variant, fnsku, order_id, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (unit_id, sku, expected_quantity, variant, fnsku, order_id, now))
+        if is_pg:
+            cursor.execute(
+                """
+                INSERT INTO units (unit_id, org_id, sku, expected_quantity, variant, fnsku, order_id, channel, is_returned, attributes, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+                ON CONFLICT (org_id, unit_id) DO UPDATE SET
+                  sku=EXCLUDED.sku, expected_quantity=EXCLUDED.expected_quantity, variant=EXCLUDED.variant,
+                  fnsku=EXCLUDED.fnsku, order_id=EXCLUDED.order_id, channel=EXCLUDED.channel,
+                  is_returned=EXCLUDED.is_returned, attributes=EXCLUDED.attributes
+                """,
+                (unit_id, org_id, sku, expected_quantity, variant, fnsku, order_id, channel, is_returned, attrs_json, now),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO units (unit_id, org_id, sku, expected_quantity, variant, fnsku, order_id, channel, is_returned, attributes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (unit_id, org_id, sku, expected_quantity, variant, fnsku, order_id, channel, int(is_returned), attrs_json, now),
+            )
+    conn.close()
+
+
+def get_unit_profile(org_id: str, unit_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    is_pg = isinstance(conn, psycopg2.extensions.connection)
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT unit_id, org_id, sku, expected_quantity, variant, fnsku, order_id, channel, is_returned, attributes FROM units WHERE org_id = %s AND unit_id = %s"
+            if is_pg
+            else "SELECT unit_id, org_id, sku, expected_quantity, variant, fnsku, order_id, channel, is_returned, attributes FROM units WHERE org_id = ? AND unit_id = ?",
+            (org_id, unit_id),
+        )
+        row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    if is_pg:
+        keys = ["unit_id", "org_id", "sku", "expected_quantity", "variant", "fnsku", "order_id", "channel", "is_returned", "attributes"]
+        rec = dict(zip(keys, row))
+    else:
+        rec = dict(row) if hasattr(row, "keys") else {
+            "unit_id": row[0], "org_id": row[1], "sku": row[2], "expected_quantity": row[3],
+            "variant": row[4], "fnsku": row[5], "order_id": row[6], "channel": row[7],
+            "is_returned": bool(row[8]), "attributes": row[9],
+        }
+    attrs = rec.get("attributes")
+    if isinstance(attrs, str):
+        try:
+            rec["attributes"] = json.loads(attrs)
+        except Exception:
+            rec["attributes"] = {}
+    return rec
+
+
+def ensure_organization(org_id: str, name: str) -> None:
+    conn = get_connection()
+    now = datetime.now(timezone.utc).isoformat()
+    is_pg = isinstance(conn, psycopg2.extensions.connection)
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO organizations (org_id, name, created_at) VALUES (%s, %s, %s) ON CONFLICT (org_id) DO NOTHING"
+            if is_pg
+            else "INSERT OR IGNORE INTO organizations (org_id, name, created_at) VALUES (?, ?, ?)",
+            (org_id, name, now),
+        )
     conn.close()
 
 def save_workflow_db(workflow_id: str, subject_id: str, route: str = "FBA", current_stage: str = "receiving", status: str = "ACTIVE", final_outcome: Optional[str] = None, org_id: str = "org_demo_alpha"):
@@ -214,13 +345,17 @@ def save_evidence_db(record: Dict[str, Any]):
     is_postgres = isinstance(conn, psycopg2.extensions.connection)
     now = datetime.now(timezone.utc).isoformat()
     
-    evidence_id = record["evidence_id"]
+    evidence_id = record.get("evidence_id") or record.get("record_id")
+    if not evidence_id:
+        raise ValueError("evidence record missing record_id")
     workflow_id = record["workflow_id"]
-    unit_id = record["subject_id"]
+    subj = record.get("subject") or {}
+    unit_id = subj.get("subject_id") or subj.get("unit_id") or record.get("subject_id")
     stage = record["stage"]
-    verdict = record["verdict"]
-    confidence = float(record.get("confidence", 1.0))
-    reason = record.get("reason", "")
+    decision = record.get("decision") or {}
+    verdict = decision.get("verdict") or record.get("verdict", "UNCERTAIN")
+    confidence = float(decision.get("confidence") if decision.get("confidence") is not None else record.get("confidence", 1.0))
+    reason = decision.get("reason") or record.get("reason", "")
     model_info = record.get("model", {})
     model_name = model_info.get("name", "CUBE-Vision-Core") if isinstance(model_info, dict) else str(model_info)
     model_version = model_info.get("version", "v3.0.0") if isinstance(model_info, dict) else "v3.0.0"
@@ -284,12 +419,26 @@ def save_human_review_db(review_id: str, exception_id: str, workflow_id: str, st
         """, (review_id, exception_id, workflow_id, stage, old_verdict, new_verdict, reason, actor, now))
     conn.close()
 
-def get_evidence_for_unit(unit_id: str) -> List[Dict[str, Any]]:
+def get_evidence_for_unit(unit_id: str, org_id: Optional[str] = None) -> List[Dict[str, Any]]:
     conn = get_connection()
     records = []
+    is_pg = isinstance(conn, psycopg2.extensions.connection)
+    placeholder = "%s" if is_pg else "?"
     with conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM evidence_records WHERE unit_id = ? ORDER BY created_at ASC" if not isinstance(conn, psycopg2.extensions.connection) else "SELECT * FROM evidence_records WHERE unit_id = %s ORDER BY created_at ASC", (unit_id,))
+        if org_id is None:
+            cursor.execute(
+                f"SELECT * FROM evidence_records WHERE unit_id = {placeholder} ORDER BY created_at ASC",
+                (unit_id,),
+            )
+        else:
+            cursor.execute(
+                f"""SELECT e.* FROM evidence_records e
+                    JOIN workflows w ON w.workflow_id = e.workflow_id
+                    WHERE e.unit_id = {placeholder} AND w.org_id = {placeholder}
+                    ORDER BY e.created_at ASC""",
+                (unit_id, org_id),
+            )
         rows = cursor.fetchall()
         for r in rows:
             rec = dict(r) if isinstance(r, sqlite3.Row) else {

@@ -11,6 +11,7 @@ export interface SubjectRef {
   fnsku?: string;
   order_id?: string;
   po_number?: string;
+  refs?: Record<string, string | number | null>;
 }
 
 export interface CheckItem {
@@ -57,6 +58,7 @@ export interface StageResult {
   state: 'pending' | 'completed' | 'skipped' | 'error';
   skipped_reason?: string | null;
   record_id?: string | null;
+  evidence_status?: string | null;
   verdict?: VerdictType | null;
   outcome?: string | null;
   needs_human?: boolean | null;

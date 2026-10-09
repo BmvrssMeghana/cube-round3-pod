@@ -1,5 +1,5 @@
 import React from 'react';
-import { WorkflowState, EvidenceRecord } from '../types';
+import type { WorkflowState, EvidenceRecord } from '../types';
 import { StatusBadge } from './StatusBadge';
 import { WorkflowTimeline } from './WorkflowTimeline';
 
@@ -11,27 +11,36 @@ interface UnitPassportCardProps {
 
 export const UnitPassportCard: React.FC<UnitPassportCardProps> = ({ workflow, evidence, onOpenOverride }) => {
   return (
-    <div className="glass-panel">
-      <div className="panel-title">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '24px' }}>🪪</span>
+    <div className="p-6 rounded-2xl bg-brand-card border border-brand-border space-y-6">
+      {/* Passport Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-brand-border">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-brand-yellow/15 text-brand-yellow flex items-center justify-center font-mono text-xl font-bold">
+            🪪
+          </div>
           <div>
-            <div style={{ fontSize: '18px', fontWeight: 800 }}>Unit Passport: {workflow.subject_id}</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-              Workflow ID: {workflow.workflow_id} | Org: {workflow.org_id}
+            <div className="flex items-center gap-2">
+              <span className="font-syne font-extrabold text-xl text-white uppercase tracking-tight">
+                Unit Passport: {workflow.subject_id}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-brand-yellow/10 border border-brand-yellow/20 font-mono text-[10px] text-brand-yellow font-bold uppercase">
+                {workflow.org_id}
+              </span>
+            </div>
+            <div className="font-poppins text-xs text-brand-muted mt-1">
+              Workflow ID: <code className="text-slate-300">{workflow.workflow_id}</code>
             </div>
           </div>
         </div>
         <StatusBadge verdict={workflow.status} />
       </div>
 
-      <div style={{ marginBottom: '24px' }}>
-        <WorkflowTimeline stageResults={workflow.stage_results} currentStage={workflow.current_stage} />
-      </div>
+      {/* Workflow Stepper Timeline */}
+      <WorkflowTimeline stageResults={workflow.stage_results} currentStage={workflow.current_stage} />
 
-      {/* Stage Evidence Deep Dive */}
-      <div style={{ marginTop: '24px' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accent-secondary)' }}>
+      {/* Continuous Evidence Trail */}
+      <div className="space-y-4 pt-2">
+        <h4 className="font-syne font-extrabold text-sm text-brand-yellow uppercase tracking-wider">
           Continuous Evidence Trail ({workflow.evidence_references.length} Stored Records)
         </h4>
 
@@ -40,40 +49,49 @@ export const UnitPassportCard: React.FC<UnitPassportCardProps> = ({ workflow, ev
           if (!ev) return null;
 
           return (
-            <div key={ref} style={{ background: 'rgba(19, 27, 46, 0.6)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ textTransform: 'uppercase', fontWeight: 800, fontSize: '13px', background: 'var(--accent-glow)', padding: '4px 10px', borderRadius: '6px', color: '#fff' }}>
+            <div key={ref} className="p-5 rounded-xl bg-brand-surface border border-brand-border space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-poppins text-xs">
+                  <span className="px-2.5 py-1 rounded-md bg-brand-yellow text-black font-bold uppercase text-[10px]">
                     {ev.stage}
                   </span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Record ID: <code>{ev.record_id}</code></span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Captured: {ev.captured_at}</span>
+                  <span className="text-brand-muted">Record: <code className="text-slate-200">{ev.record_id}</code></span>
+                  <span className="text-neutral-500">Captured: {ev.captured_at}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="flex items-center gap-2">
                   <StatusBadge verdict={ev.decision.verdict} />
                   {onOpenOverride && (
-                    <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => onOpenOverride(ev.record_id)}>
+                    <button
+                      className="pill-btn px-3 py-1 rounded-full bg-brand-cardHigh border border-brand-border text-xs text-white hover:border-brand-yellow font-poppins"
+                      onClick={() => onOpenOverride(ev.record_id)}
+                    >
                       Override
                     </button>
                   )}
                 </div>
               </div>
 
-              <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                <strong>Agent Verdict Reason:</strong> {ev.decision.reason}
+              <div className="text-xs text-slate-200 leading-relaxed">
+                <strong className="text-brand-muted uppercase font-poppins text-[11px] mr-2">Verdict Reason:</strong>
+                {ev.decision.reason}
               </div>
 
               {/* Granular Checks */}
               {ev.checks.length > 0 && (
-                <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)', padding: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                <div className="p-3 rounded-lg bg-black/40 border border-brand-border/60 space-y-2">
+                  <div className="font-poppins text-[10px] uppercase font-bold text-brand-muted tracking-wider">
                     AI Inspection Checks ({ev.checks.length})
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {ev.checks.map((c, idx) => (
-                      <div key={idx} style={{ fontSize: '12px', padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '4px', borderLeft: `3px solid ${c.verdict === 'PASS' ? 'var(--color-pass)' : (c.verdict === 'FAIL' ? 'var(--color-fail)' : 'var(--color-uncertain)')}` }}>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{c.check_key}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      <div
+                        key={idx}
+                        className={`p-2.5 rounded border-l-4 bg-brand-card/60 text-xs font-poppins ${
+                          c.verdict === 'PASS' ? 'border-brand-secondary' : (c.verdict === 'FAIL' ? 'border-brand-crimson' : 'border-brand-orange')
+                        }`}
+                      >
+                        <div className="font-bold text-white mb-0.5">{c.check_key}</div>
+                        <div className="text-[11px] text-brand-muted truncate">
                           Observed: {typeof c.observed === 'object' ? JSON.stringify(c.observed) : String(c.observed ?? 'N/A')}
                         </div>
                       </div>
@@ -84,7 +102,7 @@ export const UnitPassportCard: React.FC<UnitPassportCardProps> = ({ workflow, ev
 
               {/* Upstream Evidence References */}
               {ev.upstream_refs.length > 0 && (
-                <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                <div className="font-poppins text-[10px] text-brand-muted pt-1">
                   🔗 Upstream Evidence References: {ev.upstream_refs.join(', ')}
                 </div>
               )}
@@ -95,13 +113,13 @@ export const UnitPassportCard: React.FC<UnitPassportCardProps> = ({ workflow, ev
 
       {/* Audit & Overrides Trail */}
       {workflow.overrides.length > 0 && (
-        <div style={{ marginTop: '24px', background: 'var(--color-uncertain-bg)', border: '1px solid var(--color-uncertain-border)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
-          <h5 style={{ color: 'var(--color-uncertain)', fontWeight: 800, fontSize: '13px', marginBottom: '8px' }}>
-            ⚠️ Human Audit & Verdict Overrides ({workflow.overrides.length})
+        <div className="p-4 rounded-xl bg-brand-orange/10 border border-brand-orange/30 space-y-2">
+          <h5 className="font-poppins text-xs font-bold text-brand-orange uppercase">
+            ⚠️ Human Audit &amp; Verdict Overrides ({workflow.overrides.length})
           </h5>
           {workflow.overrides.map((o) => (
-            <div key={o.override_id} style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '6px' }}>
-              <strong>{o.actor}</strong> overridden record <code>{o.supersedes.record_id}</code> from {o.previous_verdict} → <strong>{o.new_verdict}</strong>: "{o.reason}" ({o.at})
+            <div key={o.override_id} className="font-poppins text-xs text-slate-200">
+              <strong className="text-white">{o.actor}</strong> overridden record <code className="text-brand-yellow">{o.supersedes.record_id}</code> from {o.previous_verdict} → <strong className="text-brand-secondary">{o.new_verdict}</strong>: "{o.reason}" ({o.at})
             </div>
           ))}
         </div>

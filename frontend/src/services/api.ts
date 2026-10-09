@@ -1,39 +1,160 @@
-import { WorkflowState, EvidenceRecord, StageName } from '../types';
+import type { WorkflowState, EvidenceRecord, StageName } from '../types';
+
 import { DEMO_WORKFLOWS, DEMO_EVIDENCE } from '../data/demoData';
 
 const BASE_URL = '/api';
+
+const ALLOW_DEMO_FALLBACK = import.meta.env.VITE_ALLOW_DEMO_FALLBACK === '1';
+
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
+async function responseError(response: Response): Promise<Error> {
+  let message = `Request failed (${response.status})`;
+  try {
+    const body = await response.json();
+    const detail = body?.detail;
+    if (typeof detail === 'string') message = detail;
+    else if (Array.isArray(detail)) message = detail.map((item) => item.msg || item).join('; ');
+  } catch {
+    // Keep the HTTP status as the actionable error when the body is not JSON.
+  }
+  return new ApiError(message, response.status);
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw await responseError(response);
+  return response.json();
+}
 
 export async function fetchHealth(): Promise<{ status: string; flow: string; agents: Record<string, any> }> {
   try {
     const res = await fetch(`${BASE_URL}/health`);
     if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn('Backend health API offline, using fallback');
+  } catch (error) {
+    console.error('Backend health API unavailable', error);
   }
   return {
-    status: 'ok',
+    status: 'degraded',
     flow: 'standard-fba-mfn',
     agents: {
-      receiving: { status: 'ok', mode: 'inproc' },
-      prep: { status: 'ok', mode: 'inproc' },
-      pack: { status: 'ok', mode: 'inproc' },
-      returns: { status: 'ok', mode: 'inproc' },
-      recovery: { status: 'ok', mode: 'inproc' },
+      receiving: { status: 'down', mode: 'offline' },
+      prep: { status: 'down', mode: 'offline' },
+      pack: { status: 'down', mode: 'offline' },
+      returns: { status: 'down', mode: 'offline' },
+      recovery: { status: 'down', mode: 'offline' },
     },
   };
 }
 
-export async function fetchWorkflows(): Promise<WorkflowState[]> {
+export async function fetchWorkflows(orgId: string = 'org_demo_alpha'): Promise<WorkflowState[]> {
   try {
-    const res = await fetch(`${BASE_URL}/workflows`);
+    const res = await fetch(`${BASE_URL}/workflows?org_id=${encodeURIComponent(orgId)}`);
     if (res.ok) {
       const list = await res.json();
-      if (Array.isArray(list) && list.length > 0) return list;
+      if (Array.isArray(list)) return list;
     }
-  } catch (e) {
-    console.warn('Fetch workflows offline, using demo dataset');
+  } catch (error) {
+    console.warn('Fetch workflows failed', error);
   }
-  return Object.values(DEMO_WORKFLOWS);
+  if (ALLOW_DEMO_FALLBACK) return Object.values(DEMO_WORKFLOWS);
+  return [];
+}
+
+export interface DashboardSummary {
+  org_id: string;
+  generated_at: string;
+  range: { key: string; start: string; end: string };
+  kpis: Record<string, number | null | Record<string, number>>;
+  funnel: Record<string, number>;
+  agent_performance: Record<string, { pass: number; fail: number; uncertain: number; completed_in_period: number }>;
+  verdict_distribution: { counts: Record<string, number>; denominator: number; percentages: Record<string, number> };
+  operational_health: { metric: string; percentage: number | null; numerator: number; denominator: number };
+  latency: { median_ms: number | null; average_ms: number | null };
+}
+
+function dashboardQuery(orgId: string, range: string, start?: string, end?: string): string {
+  const params = new URLSearchParams({ org_id: orgId, range });
+  if (start) params.set('start', start);
+  if (end) params.set('end', end);
+  return params.toString();
+}
+
+export async function fetchDashboardSummary(
+  orgId: string,
+  range: string = '30d',
+  start?: string,
+  end?: string,
+): Promise<DashboardSummary | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/dashboard/summary?${dashboardQuery(orgId, range, start, end)}`);
+    if (res.ok) return await res.json();
+  } catch (error) {
+    console.warn('Dashboard summary unavailable', error);
+  }
+  return null;
+}
+
+export async function fetchDashboardTimeseries(orgId: string, range: string = '30d') {
+  try {
+    const res = await fetch(`${BASE_URL}/dashboard/timeseries?${dashboardQuery(orgId, range)}`);
+    if (res.ok) return await res.json();
+  } catch (error) {
+    console.warn('Dashboard timeseries unavailable', error);
+  }
+  return null;
+}
+
+export async function fetchDashboardActivity(orgId: string, limit = 40) {
+  try {
+    const res = await fetch(`${BASE_URL}/dashboard/activity?org_id=${encodeURIComponent(orgId)}&limit=${limit}`);
+    if (res.ok) return await res.json();
+  } catch (error) {
+    console.warn('Dashboard activity unavailable', error);
+  }
+  return [];
+}
+
+export async function fetchDashboardLocations(orgId: string) {
+  try {
+    const res = await fetch(`${BASE_URL}/dashboard/locations?org_id=${encodeURIComponent(orgId)}`);
+    if (res.ok) return await res.json();
+  } catch (error) {
+    console.warn('Dashboard locations unavailable', error);
+  }
+  return null;
+}
+
+export async function fetchAgentDashboard(
+  stage: StageName,
+  orgId: string,
+  params: Record<string, string | number> = {},
+) {
+  const qs = new URLSearchParams({ org_id: orgId, ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])) });
+  try {
+    const res = await fetch(`${BASE_URL}/dashboard/agents/${stage}?${qs}`);
+    if (res.ok) return await res.json();
+  } catch (error) {
+    console.warn(`Agent dashboard ${stage} unavailable`, error);
+  }
+  return null;
+}
+
+export async function probeBackend(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE_URL}/health`, { method: 'GET' });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export async function fetchWorkflow(unitId: string, orgId: string = 'org_demo_alpha'): Promise<WorkflowState> {
@@ -41,8 +162,8 @@ export async function fetchWorkflow(unitId: string, orgId: string = 'org_demo_al
   try {
     const res = await fetch(`${BASE_URL}/workflows/${workflowId}`);
     if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn(`Fetching workflow ${workflowId} failed, checking demo dataset`);
+  } catch (error) {
+    console.warn(`Fetching workflow ${workflowId} failed, checking demo dataset`, error);
   }
 
   if (DEMO_WORKFLOWS[unitId]) {
@@ -81,8 +202,8 @@ export async function fetchWorkflowBundle(unitId: string, orgId: string = 'org_d
   try {
     const res = await fetch(`${BASE_URL}/workflows/${workflowId}/evidence`);
     if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn(`Fetching bundle for ${workflowId} failed, using demo dataset`);
+  } catch (error) {
+    console.warn(`Fetching bundle for ${workflowId} failed, using demo dataset`, error);
   }
 
   const wf = await fetchWorkflow(unitId, orgId);
@@ -97,84 +218,40 @@ export async function fetchWorkflowBundle(unitId: string, orgId: string = 'org_d
 }
 
 export async function triggerWorkflowRun(unitId: string, orgId: string = 'org_demo_alpha', route: string = 'fba', returned: boolean = false): Promise<WorkflowState> {
-  try {
-    const res = await fetch(`${BASE_URL}/workflows`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ org_id: orgId, unit_id: unitId, route, returned }),
-    });
-    if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn('Trigger workflow run failed, simulating run');
-  }
-
-  return await fetchWorkflow(unitId, orgId);
+  return postJson<WorkflowState>('/workflows', {
+    org_id: orgId, unit_id: unitId, route, returned, sku: 'SKU-TEST-101', expected_qty: 1,
+  });
 }
 
 export async function createCustomUnit(unitId: string, route: string = 'fba', returned: boolean = false, sku: string = 'SKU-TEST-101', expectedQty: number = 10): Promise<WorkflowState> {
-  try {
-    const res = await fetch(`${BASE_URL}/workflows`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ org_id: 'org_demo_alpha', unit_id: unitId, route, returned, sku, expected_qty: expectedQty }),
-    });
-    if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn('Create custom unit failed, simulating creation');
-  }
-
-  return fetchWorkflow(unitId);
+  return createUnit({ unit_id: unitId, route, returned, sku, expected_qty: expectedQty });
 }
 
-export async function runStageInspection(unitId: string, stage: StageName, payload: Record<string, any>): Promise<{ workflow: WorkflowState; output: any; evidence: EvidenceRecord }> {
-  try {
-    const res = await fetch(`${BASE_URL}/inspect/${stage}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ unit_id: unitId, subject_id: unitId, org_id: 'org_demo_alpha', ...payload }),
-    });
-    if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn(`Live inspection for stage ${stage} failed backend call`);
-  }
+export async function createUnit(input: {
+  unit_id: string;
+  org_id?: string;
+  route?: string;
+  returned?: boolean;
+  sku: string;
+  expected_qty: number;
+  variant?: string;
+  fnsku?: string;
+  order_id?: string;
+}): Promise<WorkflowState> {
+  return postJson<WorkflowState>('/units', { org_id: 'org_demo_alpha', ...input });
+}
 
-  // Fallback client simulation if backend is unavailable
-  const recId = `${stage.substring(0, 3).toUpperCase()}-NEW-${Date.now().toString().slice(-4)}`;
-  const mockEv: EvidenceRecord = {
-    schema_version: '1.0',
-    record_id: recId,
-    workflow_id: `WF-org_demo_alpha-${unitId}`,
-    stage,
-    agent_id: `${stage}-agent@v1.0`,
-    subject: { org_id: 'org_demo_alpha', subject_id: unitId, unit_id: unitId, sku: payload.sku || 'SKU-TEST-101' },
-    status: 'completed',
-    captured_at: new Date().toISOString(),
-    produced_at: new Date().toISOString(),
-    model: { name: `${stage}-ai-engine-v1`, version: '1.0', provider: 'cube' },
-    checks: [
-      { check_key: 'inspection_status', verdict: payload.verdict || 'PASS', expected: 'PASS', observed: payload.verdict || 'PASS', detail: 'Interactive inspection evaluated.' }
-    ],
-    decision: {
-      verdict: payload.verdict || 'PASS',
-      outcome: payload.outcome || 'completed',
-      confidence: 0.95,
-      reason: payload.reason || `Live inspection executed for stage ${stage.toUpperCase()}`,
-      needs_human: payload.verdict === 'UNCERTAIN',
-    },
-    payload,
-    upstream_refs: [],
-  };
-
-  const wf = await fetchWorkflow(unitId);
-  wf.evidence_references.push(recId);
-  const sr = wf.stage_results.find((s) => s.stage === stage);
-  if (sr) {
-    sr.state = 'completed';
-    sr.verdict = mockEv.decision.verdict;
-    sr.record_id = recId;
-  }
-
-  return { workflow: wf, output: { evidence: mockEv }, evidence: mockEv };
+export async function runStageInspection(
+  unitId: string,
+  stage: StageName,
+  payload: Record<string, any>,
+  orgId: string = 'org_demo_alpha',
+  route: string = 'fba',
+  returned: boolean = false,
+): Promise<{ workflow: WorkflowState; output: any; evidence: EvidenceRecord }> {
+  return postJson<{ workflow: WorkflowState; output: any; evidence: EvidenceRecord }>(`/inspect/${stage}`, {
+    ...payload, unit_id: unitId, org_id: orgId, route, returned,
+  });
 }
 
 export async function submitOverride(
@@ -186,28 +263,14 @@ export async function submitOverride(
   orgId: string = 'org_demo_alpha'
 ): Promise<WorkflowState> {
   const workflowId = `WF-${orgId}-${unitId}`;
-  try {
-    const res = await fetch(`${BASE_URL}/workflows/${workflowId}/overrides`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ record_id: recordId, new_verdict: newVerdict, actor, reason }),
-    });
-    if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn('Submit override failed, simulating override update');
-  }
-
-  const wf = await fetchWorkflow(unitId, orgId);
-  wf.overrides.push({
-    override_id: `OVR-${wf.overrides.length + 1}`,
-    supersedes: { record_id: recordId, override_id: null },
-    target: 'decision',
-    actor,
-    at: new Date().toISOString(),
-    reason,
-    original_verdict: 'FAIL',
-    previous_verdict: 'FAIL',
-    new_verdict: newVerdict,
+  return postJson<WorkflowState>(`/workflows/${workflowId}/overrides`, {
+    record_id: recordId, new_verdict: newVerdict, actor, reason,
   });
-  return wf;
 }
+
+export async function runWorkflow(unitId: string, orgId: string = 'org_demo_alpha'): Promise<WorkflowState> {
+  const workflowId = `WF-${orgId}-${unitId}`;
+  return postJson<WorkflowState>(`/workflows/${workflowId}/run`, {});
+}
+
+export { submitOverride as applyOverride };
