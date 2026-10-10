@@ -68,30 +68,69 @@ connected to a live model.
 These are logical capabilities coordinated within each manager---not 30
 separately deployed agents.
 
-``` mermaid
+
 flowchart TB
-    subgraph RCV["Receiving Manager · 6 workstreams"]
-      R1["Capture & Quality Gate"] --> R2["Identity Resolver"] --> R3["Quantity Counter"]
-      R3 --> R4["Variant Checker"] --> R5["Damage Inspector"] --> R6["Decision & Evidence Builder"]
+    subgraph RCV["1. Receiving Manager — 6 Specialists"]
+        R1["Capture & Quality Gate<br/>Checks image quality and integrity"]
+        R2["Identity Resolver<br/>Matches item identity with purchase order"]
+        R3["Quantity Counter<br/>Compares expected and observed quantities"]
+        R4["Variant Checker<br/>Checks colour, size and variant"]
+        R5["Damage Inspector<br/>Identifies visible damage"]
+        R6["Decision & Evidence Builder<br/>Combines checks and records evidence"]
+        R1 --> R2 --> R3 --> R4 --> R5 --> R6
     end
-    subgraph PRP["Prep Manager · 6 workstreams"]
-      P1["Requirement Resolver"] --> P2["Capture Guide & Gate"] --> P3["Polybag & Seal Checker"]
-      P3 --> P4["Warning Reader"] --> P5["Label & Barcode Inspector"] --> P6["Compliance Decider"]
+
+    subgraph PRP["2. Prep Manager — 6 Specialists"]
+        P1["Requirement Resolver<br/>Selects applicable prep rules"]
+        P2["Capture Guide & Gate<br/>Checks required views and image quality"]
+        P3["Polybag & Seal Checker<br/>Checks bag presence and seal"]
+        P4["Warning Reader<br/>Checks required warning labels"]
+        P5["Label & Barcode Inspector<br/>Checks labels, barcodes and expiry"]
+        P6["Compliance Decider<br/>Determines prep compliance"]
+        P1 --> P2 --> P3 --> P4 --> P5 --> P6
     end
-    subgraph PCK["Pack Manager · 5 workstreams"]
-      K1["Capture Guide & Gate"] --> K2["Item Detector"] --> K3["Quantity Counter"]
-      K3 --> K4["Order Reconciler"] --> K5["Seal Decider"]
+
+    subgraph PCK["3. Pack Manager — 5 Specialists"]
+        K1["Capture Guide & Gate<br/>Checks required package views"]
+        K2["Item Detector<br/>Identifies packed item types"]
+        K3["Quantity Counter<br/>Counts each item type"]
+        K4["Order Reconciler<br/>Finds missing, wrong or extra items"]
+        K5["Seal Decider<br/>Decides seal, fix or uncertainty"]
+        K1 --> K2 --> K3 --> K4 --> K5
     end
-    subgraph RTN["Returns Manager · 6 workstreams"]
-      T1["Capture Guide"] --> T2["Identity Verifier"] --> T3["Completeness Checker"]
-      T3 --> T4["Condition Grader"] --> T5["Disposition Recommender"] --> T6["Evidence & Explanation Builder"]
+
+    subgraph RTN["4. Returns Manager — 6 Specialists"]
+        T1["Capture Guide<br/>Checks required return images"]
+        T2["Identity Verifier<br/>Matches return with original item"]
+        T3["Completeness Checker<br/>Checks included components"]
+        T4["Condition Grader<br/>Assesses product and packaging condition"]
+        T5["Disposition Recommender<br/>Recommends restock, refurbish, liquidate or dispose"]
+        T6["Evidence & Explanation Builder<br/>Explains decision using lifecycle evidence"]
+        T1 --> T2 --> T3 --> T4 --> T5 --> T6
     end
-    subgraph RCY["Recovery Manager · 7 workstreams"]
-      C1["Report Parser"] --> C2["Unit Matcher"] --> C3["Evidence Retriever"]
-      C3 --> C4["Duplicate & Reimbursed Detector"] --> C5["Charge-Evidence Classifier"]
-      C5 --> C6["Claim Assembler"] --> C7["Explanation Writer"]
+
+    subgraph RCY["5. Recovery Manager — 7 Specialists"]
+        C1["Report Parser<br/>Structures fee-report rows"]
+        C2["Unit Matcher<br/>Links charges to units and shipments"]
+        C3["Evidence Retriever<br/>Collects relevant upstream evidence"]
+        C4["Duplicate & Reimbursed Detector<br/>Flags duplicate or already-paid charges"]
+        C5["Charge-Evidence Classifier<br/>Classifies charges against evidence"]
+        C6["Claim Assembler<br/>Builds eligible claims with evidence references"]
+        C7["Explanation Writer<br/>Explains claims and non-claims"]
+        C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7
     end
-```
+
+    classDef receiving fill:#E5EEFF,stroke:#4779C7,color:#18345D;
+    classDef prep fill:#DDF5E7,stroke:#399568,color:#164B32;
+    classDef pack fill:#FFF0D5,stroke:#D49A35,color:#62400A;
+    classDef returns fill:#FFE5E5,stroke:#D65B63,color:#65252B;
+    classDef recovery fill:#EEE6FF,stroke:#8C6AC4,color:#38265E;
+
+    class R1,R2,R3,R4,R5,R6 receiving;
+    class P1,P2,P3,P4,P5,P6 prep;
+    class K1,K2,K3,K4,K5 pack;
+    class T1,T2,T3,T4,T5,T6 returns;
+    class C1,C2,C3,C4,C5,C6,C7 recovery;
 
 ### Manager counts
 
