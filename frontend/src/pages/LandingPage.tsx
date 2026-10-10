@@ -254,8 +254,8 @@ export function LandingPage({
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.3)';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)';
                 }}
               >
                 <div style={S.stageTop}>
@@ -380,14 +380,13 @@ export function LandingPage({
 }
 
 // ─── Pure inline style system ─────────────────────────────────────────────────
-const BG = '#07090f';
-const SURFACE = '#0d1117';
-const CARD = '#131822';
-const BORDER = 'rgba(255,255,255,0.08)';
+const BG = 'var(--bg-base)';
+const CARD = 'var(--bg-card)';
+const BORDER = 'var(--border)';
 const BLUE = '#3b82f6';
-const TEXT = '#e7edf6';
-const MUTED = '#8899b0';
-const SUBTLE = '#546070';
+const TEXT = 'var(--text-primary)';
+const MUTED = 'var(--text-muted)';
+const SUBTLE = 'var(--text-subtle)';
 
 const styles = {
   root: {
@@ -440,7 +439,7 @@ const styles = {
     position: 'sticky' as const,
     top: 0,
     zIndex: 100,
-    background: 'rgba(7,9,15,0.85)',
+    background: 'var(--bg-topbar)',
     backdropFilter: 'blur(20px)',
     borderBottom: `1px solid ${BORDER}`,
   },
@@ -472,7 +471,7 @@ const styles = {
     height: 36,
     borderRadius: 10,
     background: 'linear-gradient(135deg, #2563eb, #3b82f6)',
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontWeight: 900,
     fontSize: 16,
     fontFamily: 'Manrope, system-ui, sans-serif',
@@ -485,7 +484,7 @@ const styles = {
     fontFamily: 'Manrope, system-ui, sans-serif',
     fontWeight: 800,
     fontSize: 18,
-    color: '#fff',
+    color: 'var(--text-primary)',
     letterSpacing: '-0.06em',
     lineHeight: 1,
   },
@@ -516,14 +515,14 @@ const styles = {
     fontFamily: 'inherit',
   },
   navItemActive: {
-    background: 'rgba(255,255,255,0.08)',
+    background: 'var(--accent-soft)',
     border: 'none',
     cursor: 'pointer',
     padding: '6px 14px',
     borderRadius: 999,
     fontSize: 12,
     fontWeight: 600,
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontFamily: 'inherit',
   },
   headerActions: {
@@ -536,7 +535,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    background: 'rgba(255,255,255,0.06)',
+    background: 'var(--bg-raised)',
     border: `1px solid ${BORDER}`,
     borderRadius: 8,
     padding: '6px 12px',
@@ -547,11 +546,11 @@ const styles = {
     fontFamily: 'inherit',
   },
   signUpBtn: {
-    background: 'rgba(255,255,255,0.08)',
-    border: `1px solid rgba(255,255,255,0.15)`,
+    background: 'var(--bg-surface)',
+    border: `1px solid ${BORDER}`,
     borderRadius: 8,
     padding: '7px 16px',
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontSize: 12,
     fontWeight: 600,
     cursor: 'pointer',
@@ -603,7 +602,7 @@ const styles = {
     fontWeight: 700,
     letterSpacing: '0.14em',
     textTransform: 'uppercase' as const,
-    color: '#93c5fd',
+    color: 'var(--accent-strong)',
     marginBottom: 32,
   },
   heroBadgeDot: {
@@ -620,7 +619,7 @@ const styles = {
     fontWeight: 800,
     lineHeight: 1.0,
     letterSpacing: '-0.05em',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     margin: '0 0 24px',
   },
   heroAccent: {
@@ -663,11 +662,11 @@ const styles = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 8,
-    background: 'rgba(59,130,246,0.08)',
+    background: 'var(--accent-soft)',
     border: '1px solid rgba(59,130,246,0.3)',
     borderRadius: 10,
     padding: '13px 24px',
-    color: '#93c5fd',
+    color: 'var(--accent-strong)',
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
@@ -677,11 +676,11 @@ const styles = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 8,
-    background: 'rgba(255,255,255,0.04)',
+    background: 'var(--bg-raised)',
     border: `1px solid ${BORDER}`,
     borderRadius: 10,
     padding: '13px 24px',
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
@@ -700,7 +699,7 @@ const styles = {
   },
   tagDot: {
     fontSize: 11,
-    color: '#2a3a50',
+    color: 'var(--border-active)',
   },
   metricsRow: {
     display: 'flex',
@@ -746,7 +745,7 @@ const styles = {
     fontWeight: 700,
     letterSpacing: '0.18em',
     textTransform: 'uppercase' as const,
-    color: '#93c5fd',
+    color: 'var(--accent-strong)',
     marginBottom: 16,
   },
   lifecyclePillDot: {
@@ -761,7 +760,7 @@ const styles = {
     fontSize: 'clamp(28px, 4vw, 40px)',
     fontWeight: 800,
     letterSpacing: '-0.04em',
-    color: '#fff',
+    color: 'var(--text-primary)',
     margin: '0 0 12px',
   },
   lifecycleSub: {
@@ -776,8 +775,8 @@ const styles = {
     textAlign: 'left' as const,
   },
   stageCard: {
-    background: 'rgba(255,255,255,0.02)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'var(--bg-card)',
+    border: `1px solid ${BORDER}`,
     borderRadius: 16,
     padding: '20px',
     display: 'flex',
@@ -787,7 +786,7 @@ const styles = {
     textAlign: 'left' as const,
     fontFamily: 'inherit',
     transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+    boxShadow: 'var(--shadow-card)',
   },
   stageTop: {
     display: 'flex',
@@ -812,7 +811,7 @@ const styles = {
     fontFamily: 'Manrope, system-ui, sans-serif',
     fontSize: 20,
     fontWeight: 800,
-    color: '#fff',
+    color: 'var(--text-primary)',
     margin: '0 0 4px',
     letterSpacing: '-0.03em',
   },
@@ -870,7 +869,7 @@ const styles = {
     fontWeight: 700,
     letterSpacing: '0.18em',
     textTransform: 'uppercase' as const,
-    color: '#60a5fa',
+    color: 'var(--accent-strong)',
     marginBottom: 12,
   },
   pipelineLeft: {
@@ -883,7 +882,7 @@ const styles = {
     fontSize: 'clamp(24px, 3vw, 34px)',
     fontWeight: 800,
     letterSpacing: '-0.04em',
-    color: '#fff',
+    color: 'var(--text-primary)',
     margin: '0 0 16px',
   },
   pipelineBody: {
@@ -928,7 +927,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    background: 'rgba(255,255,255,0.04)',
+    background: 'var(--bg-raised)',
     border: `1px solid ${BORDER}`,
     borderRadius: 10,
     padding: '10px 16px',
@@ -941,12 +940,12 @@ const styles = {
     letterSpacing: '0.06em',
     padding: '2px 6px',
     borderRadius: 4,
-    background: 'rgba(255,255,255,0.06)',
+    background: 'var(--bg-surface)',
   },
   flowName: {
     fontSize: 13,
     fontWeight: 700,
-    color: '#fff',
+    color: 'var(--text-primary)',
   },
   flowDetail: {
     fontSize: 11,
@@ -955,7 +954,7 @@ const styles = {
   flowLine: {
     width: 2,
     height: 20,
-    background: 'linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+    background: 'linear-gradient(to bottom, var(--border-active), var(--border))',
     marginLeft: 5,
     borderRadius: 2,
   },
@@ -971,7 +970,7 @@ const styles = {
     fontSize: 'clamp(24px, 3.5vw, 36px)',
     fontWeight: 800,
     letterSpacing: '-0.04em',
-    color: '#fff',
+    color: 'var(--text-primary)',
     margin: '0 0 40px',
   },
   principlesGrid: {
@@ -1006,7 +1005,7 @@ const styles = {
     fontFamily: 'Manrope, system-ui, sans-serif',
     fontSize: 18,
     fontWeight: 800,
-    color: '#fff',
+    color: 'var(--text-primary)',
     letterSpacing: '-0.03em',
     margin: '0 0 10px',
   },
@@ -1043,7 +1042,7 @@ const styles = {
     fontFamily: 'Manrope, system-ui, sans-serif',
     fontSize: 'clamp(24px, 4vw, 38px)',
     fontWeight: 800,
-    color: '#fff',
+    color: 'var(--text-primary)',
     letterSpacing: '-0.04em',
     margin: '0 0 16px',
     position: 'relative' as const,
@@ -1059,7 +1058,7 @@ const styles = {
   // FOOTER
   footer: {
     borderTop: `1px solid ${BORDER}`,
-    background: 'rgba(0,0,0,0.3)',
+    background: 'var(--bg-surface)',
   },
   footerInner: {
     maxWidth: 1440,
@@ -1075,11 +1074,11 @@ const styles = {
     fontFamily: 'Manrope, system-ui, sans-serif',
     fontWeight: 800,
     fontSize: 14,
-    color: '#fff',
+    color: 'var(--text-primary)',
     letterSpacing: '-0.04em',
   },
   footerSlash: {
-    color: '#2a3a50',
+    color: 'var(--border-active)',
     margin: '0 4px',
   },
   footerTagline: {

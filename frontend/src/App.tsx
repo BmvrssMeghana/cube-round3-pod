@@ -62,7 +62,10 @@ export default function App() {
   const [databaseEngine, setDatabaseEngine] = useState('unknown');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') return 'light';
-    return (localStorage.getItem('cube-theme') as 'light' | 'dark') || 'light';
+    const savedTheme = localStorage.getItem('cube-theme');
+    const initialTheme = savedTheme === 'dark' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = initialTheme;
+    return initialTheme;
   });
 
   useEffect(() => {
