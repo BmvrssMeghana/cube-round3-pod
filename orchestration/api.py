@@ -348,13 +348,33 @@ def _get(workflow_id: str) -> dict:
 
 def _reconcile_workflow_routing(wf: dict, flow: dict) -> bool:
     context = wf.get("context") or {}
+    route = str(context.get("route") or "").strip().lower()
+    changed = False
+    profile = None
+    if route not in {"fba", "mfn"} or not isinstance(context.get("returned"), bool):
+        profile = get_unit_profile(wf["org_id"], wf["subject_id"])
+    if route not in {"fba", "mfn"}:
+        profile_route = str((profile or {}).get("channel") or "").strip().lower()
+        if profile_route in {"fba", "mfn"}:
+            route = profile_route
+            context["route"] = route
+            wf["context"] = context
+            changed = True
+        elif not route:
+            route = "fba"
+    returned = context.get("returned")
+    if not isinstance(returned, bool):
+        profile_returned = (profile or {}).get("is_returned")
+        returned = profile_returned if isinstance(profile_returned, bool) else False
+        context["returned"] = returned
+        wf["context"] = context
+        changed = True
     case = {
         "org_id": wf["org_id"],
         "unit_id": wf["subject_id"],
-        "route": str(context.get("route") or "fba").lower(),
-        "returned": bool(context.get("returned", False)),
+        "route": route,
+        "returned": returned,
     }
-    changed = False
     steps = {step["stage"]: step for step in flow["steps"]}
     for result in wf.get("stage_results") or []:
         step = steps.get(result.get("stage"))
@@ -492,9 +512,27 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
     if not re.fullmatch(r"[A-Za-z0-9._-]{1,120}", unit_id):
         raise HTTPException(422, "unit_id must contain only letters, numbers, dots, underscores, or hyphens")
     org_id = stage_input_data.get("org_id", "org_demo_alpha")
-    route_raw = (stage_input_data.get("route") or "fba").lower()
     user_inputs = {k: v for k, v in stage_input_data.items() if k not in ("captures", "inputs")}
     profile = get_unit_profile(org_id, unit_id)
+    workflow_id = workflow_id_for({"org_id": org_id, "unit_id": unit_id})
+    wf = STORE.load_workflow(workflow_id)
+    workflow_context = (wf or {}).get("context") or {}
+    workflow_route = str(workflow_context.get("route") or "").strip().lower()
+    profile_route = str((profile or {}).get("channel") or "").strip().lower()
+    requested_route = str(stage_input_data.get("route") or "").strip().lower()
+    route_raw = next(
+        (route for route in (workflow_route, profile_route, requested_route) if route in {"fba", "mfn"}),
+        "fba",
+    )
+    workflow_returned = workflow_context.get("returned")
+    profile_returned = (profile or {}).get("is_returned")
+    returned = next(
+        (
+            value for value in (workflow_returned, profile_returned, stage_input_data.get("returned"))
+            if isinstance(value, bool)
+        ),
+        False,
+    )
     profile_context = {}
     if profile:
         profile_context = {
@@ -509,15 +547,14 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
         "org_id": org_id,
         "unit_id": unit_id,
         "route": route_raw,
-        "returned": bool(stage_input_data.get("returned", False)),
+        "returned": returned,
         **profile_context,
         **user_inputs,
     }
     case["route"] = route_raw
 
     flow = load_flow(FLOW)
-    wf_id = workflow_id_for(case)
-    wf = STORE.load_workflow(wf_id) or new_workflow(case, flow)
+    wf = wf or new_workflow(case, flow)
     _reconcile_workflow_routing(wf, flow)
 
     stage_idx = next((i for i, s in enumerate(wf["stage_results"]) if s["stage"] == stage), None)
@@ -549,7 +586,7 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
 
     prev_ev = _previous_evidence(wf, stage_idx, STORE)
 
-    req_id = f"{wf_id}:{stage}:live_{time.time_ns()}"
+    req_id = f"{workflow_id}:{stage}:live_{time.time_ns()}"
     inputs = _persist_captures(unit_id, stage, stage_input_data.get("captures"))
     if not inputs:
         inputs = stage_input_data.get("inputs", [])
@@ -558,7 +595,7 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
     request = {
         "schema_version": "1.0",
         "request_id": req_id,
-        "workflow_id": wf_id,
+        "workflow_id": workflow_id,
         "stage": stage,
         "subject": {
             "org_id": org_id,

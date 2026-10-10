@@ -249,7 +249,8 @@ def test_returns_only_when_a_return_happened(cases):
 
 
 def test_unrouted_subject_skips_prep_and_pack_but_completes_the_rest(cases):
-    s = states(run_workflow(next(c for c in cases if c["route"] == "unknown"), STANDARD))
+    case = {**cases[0], "route": "unknown"}
+    s = states(run_workflow(case, STANDARD))
     assert s["prep"] == s["pack"] == "skipped" and s["receiving"] == s["recovery"] == "completed"
 
 

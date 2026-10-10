@@ -2,7 +2,7 @@
   {
     "org_id": "org_demo_alpha",
     "unit_id": "UNIT-0001",
-    "route": "unknown",
+    "route": "fba",
     "returned": false
   },
   {
@@ -98,8 +98,8 @@
   {
     "org_id": "org_demo_alpha",
     "unit_id": "UNIT-0017",
-    "route": "unknown",
-    "returned": false
+    "route": "fba",
+    "returned": true
   },
   {
     "org_id": "org_demo_bravo",
@@ -218,7 +218,7 @@
   {
     "org_id": "org_demo_alpha",
     "unit_id": "UNIT-0037",
-    "route": "unknown",
+    "route": "fba",
     "returned": false
   },
   {
@@ -236,7 +236,7 @@
   {
     "org_id": "org_demo_alpha",
     "unit_id": "UNIT-0040",
-    "route": "unknown",
+    "route": "fba",
     "returned": false
   },
   {
@@ -356,7 +356,7 @@
   {
     "org_id": "org_demo_bravo",
     "unit_id": "UNIT-0060",
-    "route": "unknown",
+    "route": "fba",
     "returned": false
   },
   {
@@ -410,8 +410,8 @@
   {
     "org_id": "org_demo_bravo",
     "unit_id": "UNIT-0069",
-    "route": "unknown",
-    "returned": false
+    "route": "fba",
+    "returned": true
   },
   {
     "org_id": "org_demo_alpha",
@@ -512,13 +512,13 @@
   {
     "org_id": "org_demo_alpha",
     "unit_id": "UNIT-0086",
-    "route": "unknown",
+    "route": "fba",
     "returned": false
   },
   {
     "org_id": "org_demo_bravo",
     "unit_id": "UNIT-0087",
-    "route": "unknown",
+    "route": "fba",
     "returned": false
   },
   {
@@ -542,8 +542,8 @@
   {
     "org_id": "org_demo_alpha",
     "unit_id": "UNIT-0091",
-    "route": "unknown",
-    "returned": false
+    "route": "fba",
+    "returned": true
   },
   {
     "org_id": "org_demo_alpha",

@@ -28,6 +28,21 @@ def test_sample_csv_import_is_database_backed_and_idempotent(monkeypatch, tmp_pa
     assert len(bravo) == 33
     assert all(workflow.get("context", {}).get("source_data_imported") for workflow in alpha + bravo)
 
+    demo_workflows = {workflow["subject_id"]: workflow for workflow in alpha + bravo}
+    unrouted_demo_units = {
+        "UNIT-0001", "UNIT-0017", "UNIT-0037", "UNIT-0040", "UNIT-0060",
+        "UNIT-0069", "UNIT-0086", "UNIT-0087", "UNIT-0091",
+    }
+    returned_demo_units = {"UNIT-0017", "UNIT-0069", "UNIT-0091"}
+    assert all(demo_workflows[unit]["context"]["route"] == "fba" for unit in unrouted_demo_units)
+    assert {
+        unit for unit in unrouted_demo_units if demo_workflows[unit]["context"]["returned"]
+    } == returned_demo_units
+    for unit in unrouted_demo_units:
+        states = {item["stage"]: item["state"] for item in demo_workflows[unit]["stage_results"]}
+        assert states["prep"] == states["pack"] == "pending"
+        assert states["returns"] == ("pending" if unit in returned_demo_units else "skipped")
+
     records = db.get_source_records_for_unit("UNIT-0001", "org_demo_alpha")
     assert Counter(record["record_type"] for record in records)["receiving"] == 1
     assert records[0]["record_data"]["unit_id"] == "UNIT-0001"

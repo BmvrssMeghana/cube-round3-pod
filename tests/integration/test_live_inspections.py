@@ -38,6 +38,63 @@ def test_create_unit_builds_a_pending_tenant_scoped_workflow(monkeypatch, tmp_pa
     assert api.STORE.list_workflows("org_test") == [workflow]
 
 
+def test_workflow_routing_recovers_from_unit_profile(monkeypatch):
+    monkeypatch.setattr(api, "get_unit_profile", lambda *_: {"channel": "fba", "is_returned": True})
+    workflow = api.new_workflow({
+        "org_id": "org_test",
+        "unit_id": "UNIT-ROUTE-1",
+        "route": "unknown",
+    }, api.load_flow(api.FLOW))
+
+    assert api._reconcile_workflow_routing(workflow, api.load_flow(api.FLOW))
+    assert workflow["context"]["route"] == "fba"
+    assert workflow["context"]["returned"] is True
+    assert {item["stage"]: item["state"] for item in workflow["stage_results"]} == {
+        "receiving": "pending",
+        "prep": "pending",
+        "pack": "pending",
+        "returns": "pending",
+        "recovery": "pending",
+    }
+
+
+def test_live_inspection_uses_profile_route_when_request_route_is_unknown(monkeypatch, tmp_path):
+    monkeypatch.setattr(api, "STORE", FileStore(tmp_path / "out"))
+    monkeypatch.setattr(api, "get_unit_profile", lambda *_: {"channel": "fba"})
+    request_routes = []
+
+    class InspectionClient:
+        def run(self, request, timeout_s):
+            request_routes.append(request["subject"]["route"])
+            return api.pending_output(
+                request,
+                code="test_inspection",
+                message="Test inspection output",
+                retryable=False,
+            )
+
+    monkeypatch.setattr(api, "client_for", lambda _stage: InspectionClient())
+    workflow = api.new_workflow({
+        "org_id": "org_test",
+        "unit_id": "UNIT-ROUTE-2",
+        "route": "unknown",
+        "returned": True,
+    }, api.load_flow(api.FLOW))
+    for stage in ("receiving", "prep", "pack"):
+        result = next(item for item in workflow["stage_results"] if item["stage"] == stage)
+        result.update({"state": "completed", "evidence_status": "completed"})
+    api.STORE.save_workflow(workflow)
+
+    result = api._execute_stage_inspection("UNIT-ROUTE-2", "returns", {
+        "org_id": "org_test",
+        "route": "unknown",
+        "returned": True,
+    })
+
+    assert request_routes == ["fba"]
+    assert result["workflow"]["context"]["route"] == "fba"
+
+
 def test_live_inspection_saves_operator_inputs_and_hashed_capture(monkeypatch, tmp_path):
     import agents.receiving.app as receiving
 
