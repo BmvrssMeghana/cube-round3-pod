@@ -1,11 +1,15 @@
 import React, { useMemo } from 'react';
+import { LogIn, Moon, Sun } from 'lucide-react';
 import type { WorkflowState, EvidenceRecord } from '../types';
 
 interface LandingPageProps {
   workflows: WorkflowState[];
   evidence: Record<string, EvidenceRecord>;
   onNavigate: (page: string, params?: Record<string, string>) => void;
-  onOpenNewUnitModal: () => void;
+  onSignIn: () => void;
+  onCreateOrganization: () => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }
 
 const AGENTS = [
@@ -55,7 +59,10 @@ export function LandingPage({
   workflows,
   evidence,
   onNavigate,
-  onOpenNewUnitModal,
+  onSignIn,
+  onCreateOrganization,
+  theme,
+  onToggleTheme,
 }: LandingPageProps) {
   const metrics = useMemo(() => {
     const completed = workflows.filter((w) => w.status === 'COMPLETED').length;
@@ -74,21 +81,8 @@ export function LandingPage({
   }, [workflows, evidence]);
 
   return (
-    <div className="landing-page min-h-screen bg-[#07080B] text-slate-100 font-sans antialiased selection:bg-[#89CFF0] selection:text-black">
+    <div className="landing-page min-h-screen bg-[#07080B] text-slate-100 font-sans antialiased selection:bg-blue-200 selection:text-black">
       {/* Status strip: deliberately avoids claiming that services are live unless health data is supplied. */}
-      <div className="border-b border-white/[0.08] bg-[#0D0F14]">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span className="inline-block h-2 w-2 rounded-full bg-[#FFE500]" />
-            <span className="font-semibold tracking-wide">CUBE OPERATIONS</span>
-            <span className="text-slate-500">/</span>
-            <span className="text-slate-400">Evidence-led commerce workflows</span>
-          </div>
-          <span className="text-[11px] text-slate-500">
-            Operational status is based on the records currently loaded
-          </span>
-        </div>
-      </div>
 
       <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#07080B]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] max-w-[1600px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -98,11 +92,11 @@ export function LandingPage({
             onClick={() => onNavigate('command-center')}
             aria-label="Open CUBE command center"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFE500] text-sm font-black tracking-tight text-black">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500 text-sm font-black tracking-tight text-white">
               C
             </span>
             <span className="text-left">
-              <span className="block font-manrope text-xl font-extrabold tracking-[-0.06em] text-white group-hover:text-[#FFE500]">
+              <span className="block font-manrope text-xl font-extrabold tracking-[-0.06em] text-white group-hover:text-blue-400">
                 CUBE
               </span>
               <span className="block text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -149,35 +143,39 @@ export function LandingPage({
             </button>
           </nav>
 
-          <button
-            type="button"
-            onClick={onOpenNewUnitModal}
-            className="pill-btn inline-flex items-center gap-2 rounded-full bg-[#FFE500] px-4 py-2.5 text-xs font-bold text-black transition hover:bg-[#E8F6FC] sm:px-5"
-          >
-            <span aria-hidden="true" className="text-base leading-none">+</span>
-            <span className="hidden sm:inline">New unit workflow</span>
-            <span className="sm:hidden">New unit</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onToggleTheme} className="landing-theme-toggle" aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}>
+              {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+              <span className="hidden sm:inline">{theme === 'light' ? 'Dark' : 'Light'}</span>
+            </button>
+            <button type="button" onClick={onCreateOrganization} className="landing-create-organization">
+              <span>Sign up</span>
+            </button>
+            <button type="button" onClick={onSignIn} className="landing-sign-in">
+              <LogIn size={15} />
+              <span>Log in</span>
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-[1600px] space-y-12 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         {/* Hero */}
         <section className="relative overflow-hidden rounded-[28px] border border-white/[0.1] bg-[#10131A]">
-          <div className="pointer-events-none absolute -right-24 -top-28 h-96 w-96 rounded-full bg-[#FFE500]/[0.09] blur-3xl" />
+          <div className="pointer-events-none absolute -right-24 -top-28 h-96 w-96 rounded-full bg-blue-500/[0.12] blur-3xl" />
           <div className="pointer-events-none absolute bottom-[-120px] right-[22%] h-72 w-72 rounded-full bg-[#89CFF0]/[0.08] blur-3xl" />
 
           <div className="relative grid gap-10 p-6 sm:p-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-center lg:p-14">
             <div>
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#FFE500]/25 bg-[#FFE500]/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#FFE500]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#FFE500]" />
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                 One physical unit. One continuous record.
               </div>
 
               <h1 className="max-w-4xl font-manrope text-4xl font-extrabold leading-[1.02] tracking-[-0.055em] text-white sm:text-6xl lg:text-7xl">
                 Every handoff
                 <br />
-                <span className="text-[#FFE500]">leaves evidence.</span>
+                <span className="text-blue-400">leaves evidence.</span>
               </h1>
 
               <p className="mt-6 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base sm:leading-8">
@@ -190,11 +188,18 @@ export function LandingPage({
               <div className="mt-8 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={onOpenNewUnitModal}
-                  className="pill-btn inline-flex items-center gap-2 rounded-full bg-[#FFE500] px-6 py-3.5 text-xs font-extrabold uppercase tracking-wide text-black hover:bg-[#E8F6FC]"
+                  onClick={onSignIn}
+                  className="pill-btn inline-flex items-center gap-2 rounded-full bg-blue-500 px-6 py-3.5 text-xs font-extrabold uppercase tracking-wide text-white hover:bg-blue-600"
                 >
-                  Start a unit workflow
+                  Sign in to get started
                   <span aria-hidden="true">↗</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onCreateOrganization}
+                  className="pill-btn rounded-full border border-blue-400/30 bg-blue-500/[0.08] px-6 py-3.5 text-xs font-bold uppercase tracking-wide text-blue-300 hover:border-blue-400/60 hover:bg-blue-500/[0.14]"
+                >
+                  Create organization
                 </button>
                 <button
                   type="button"
@@ -225,7 +230,7 @@ export function LandingPage({
                     One record across every stage
                   </h2>
                 </div>
-                <span className="rounded-lg border border-[#FFE500]/20 bg-[#FFE500]/[0.08] px-2 py-1 font-mono text-[10px] text-[#FFE500]">
+                <span className="rounded-lg border border-blue-500/20 bg-blue-500/[0.08] px-2 py-1 font-mono text-[10px] text-blue-400">
                   CUBE / 05
                 </span>
               </div>
@@ -236,16 +241,16 @@ export function LandingPage({
                     key={agent.code}
                     type="button"
                     onClick={() => onNavigate(agent.page)}
-                    className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 text-left transition hover:border-[#FFE500]/30 hover:bg-white/[0.05]"
+                    className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 text-left transition hover:border-blue-500/30 hover:bg-white/[0.05]"
                   >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FFE500]/[0.09] font-mono text-xs font-bold text-[#FFE500]">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/[0.09] font-mono text-xs font-bold text-blue-400">
                       {agent.code}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-white">{agent.name}</span>
                       <span className="mt-0.5 block text-xs text-slate-500">{agent.detail}</span>
                     </span>
-                    <span className="text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-[#FFE500]">
+                    <span className="text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-blue-400">
                       →
                     </span>
                     {index < AGENTS.length - 1 && (
@@ -266,68 +271,12 @@ export function LandingPage({
           </div>
         </section>
 
-        {/* Live values derived from the workflows and evidence supplied by the app. */}
-        <section aria-labelledby="overview-heading">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#FFE500]">
-                Operational snapshot
-              </p>
-              <h2 id="overview-heading" className="mt-1 font-manrope text-2xl font-extrabold tracking-tight text-white">
-                What needs attention?
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigate('command-center')}
-              className="text-xs font-semibold text-slate-400 transition hover:text-[#FFE500]"
-            >
-              View full command center →
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard
-              label="Tracked workflows"
-              value={metrics.total}
-              description="Workflow records currently loaded"
-              accent="yellow"
-            />
-            <MetricCard
-              label="In progress"
-              value={metrics.active}
-              description="Not completed or flagged for attention"
-              accent="blue"
-            />
-            <MetricCard
-              label="Completed"
-              value={metrics.completed}
-              description="Workflows marked completed"
-              accent="green"
-            />
-            <MetricCard
-              label="Needs attention"
-              value={metrics.exceptions}
-              description="Halted or degraded workflows"
-              accent="amber"
-            />
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-[#0D0F14] px-4 py-3">
-            <span className="text-xs text-slate-400">
-              Evidence records available in the current app state
-            </span>
-            <span className="font-mono text-sm font-semibold text-white">
-              {metrics.evidenceRecords.toLocaleString()}
-            </span>
-          </div>
-        </section>
 
         {/* Agent entry points */}
         <section aria-labelledby="agents-heading">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#FFE500]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-500">
                 Connected operational stages
               </p>
               <h2 id="agents-heading" className="mt-1 font-manrope text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
@@ -337,7 +286,7 @@ export function LandingPage({
             <button
               type="button"
               onClick={() => onNavigate('receiving')}
-              className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-[#FFE500]/30 hover:text-[#FFE500]"
+              className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-blue-500/30 hover:text-blue-500"
             >
               Open operations hub →
             </button>
@@ -349,15 +298,15 @@ export function LandingPage({
                 key={agent.code}
                 type="button"
                 onClick={() => onNavigate(agent.page)}
-                className="group flex min-h-[220px] flex-col rounded-2xl border border-white/[0.09] bg-[#0D0F14] p-5 text-left transition hover:-translate-y-1 hover:border-[#FFE500]/35 hover:bg-[#11151D]"
+                className="group flex min-h-[220px] flex-col rounded-2xl border border-white/[0.09] bg-[#0D0F14] p-5 text-left transition hover:-translate-y-1 hover:border-blue-500/35 hover:bg-[#11151D]"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-[#FFE500]">{agent.code}</span>
-                  <span className="text-slate-600 transition group-hover:text-[#FFE500]" aria-hidden="true">↗</span>
+                  <span className="font-mono text-xs font-bold text-black">{agent.code}</span>
+                  <span className="text-slate-600 transition group-hover:text-blue-400" aria-hidden="true">↗</span>
                 </div>
-                <h3 className="mt-6 font-manrope text-lg font-extrabold text-white">{agent.name}</h3>
+                <h3 className="mt-6 font-manrope text-lg font-extrabold text-blue-600">{agent.name}</h3>
                 <p className="mt-2 flex-1 text-xs leading-6 text-slate-400">{agent.description}</p>
-                <span className="mt-5 border-t border-white/[0.08] pt-3 text-[10px] font-bold uppercase tracking-[0.13em] text-slate-500 group-hover:text-[#FFE500]">
+                <span className="mt-5 border-t border-white/[0.08] pt-3 text-[10px] font-bold uppercase tracking-[0.13em] text-slate-500 group-hover:text-blue-400">
                   Open agent workspace
                 </span>
               </button>
@@ -396,7 +345,7 @@ export function LandingPage({
           <button
             type="button"
             onClick={() => onNavigate('settings')}
-            className="self-start text-slate-400 hover:text-[#FFE500] md:self-auto"
+            className="self-start text-slate-400 hover:text-blue-500 md:self-auto"
           >
             System settings →
           </button>
@@ -415,20 +364,14 @@ function MetricCard({
   label: string;
   value: number;
   description: string;
-  accent: 'yellow' | 'blue' | 'green' | 'amber';
+  accent: 'blue';
 }) {
   const accentClass = {
-    yellow: 'bg-[#FFE500]',
-    blue: 'bg-[#89CFF0]',
-    green: 'bg-emerald-300',
-    amber: 'bg-amber-300',
+    blue: 'bg-blue-500',
   }[accent];
 
   const valueClass = {
-    yellow: 'text-[#FFE500]',
-    blue: 'text-[#89CFF0]',
-    green: 'text-emerald-300',
-    amber: 'text-amber-300',
+    blue: 'text-blue-400',
   }[accent];
 
   return (
@@ -455,8 +398,8 @@ function PrincipleCard({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#0D0F14] p-5 sm:p-6">
-      <span className="font-mono text-xs font-bold text-[#FFE500]">{number}</span>
+    <div className="rounded-2xl border border-white/[0.08] bg-[#eaf2ff] p-5 sm:p-6">
+      <span className="font-mono text-xs font-bold text-blue-500">{number}</span>
       <h3 className="mt-4 font-manrope text-lg font-extrabold text-white">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
     </div>

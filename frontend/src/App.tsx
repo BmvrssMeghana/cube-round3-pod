@@ -7,13 +7,13 @@ import { ExceptionsPage } from './pages/ExceptionsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import Evaluation from './pages/Evaluation';
 import SettingsPage from './pages/SettingsPage';
-import { ApiError, applyOverride, createUnit, fetchHealth, fetchWorkflowBundle, fetchWorkflows, probeBackend, runStageInspection, runWorkflow } from './services/api';
+import { applyOverride, createUnit, fetchCurrentUser, fetchHealth, fetchWorkflowBundle, fetchWorkflows, runStageInspection, runWorkflow, signOut, type AuthSession, type AuthUser } from './services/api';
 import type { WorkflowState, EvidenceRecord, StageName } from './types';
 
-import { DEMO_WORKFLOWS, DEMO_EVIDENCE } from './data/demoData';
-import { RefreshCw, PlusCircle, Search, Bell, ChevronRight, LayoutGrid, Menu, X } from 'lucide-react';
+import { RefreshCw, PlusCircle, Search, Bell, ChevronRight, LayoutGrid, Menu, X, LogOut } from 'lucide-react';
 import { NewUnitModal } from './components/NewUnitModal';
 import { LandingPage } from './pages/LandingPage';
+import { AuthPage } from './pages/AuthPage';
 
 type Page =
   | 'landing'
@@ -44,9 +44,12 @@ const PAGE_LABELS: Record<string, string> = {
 export default function App() {
   const [page, setPage] = useState<Page>('landing');
   const [pageParams, setPageParams] = useState<Record<string, string>>({});
-  const [org, setOrg] = useState('org_demo_alpha');
-  const [workflows, setWorkflows] = useState<WorkflowState[]>(() => Object.values(DEMO_WORKFLOWS));
-  const [evidence, setEvidence] = useState<Record<string, EvidenceRecord>>(DEMO_EVIDENCE);
+  const [org, setOrg] = useState('');
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState<'signin' | 'organization'>('signin');
+  const [workflows, setWorkflows] = useState<WorkflowState[]>([]);
+  const [evidence, setEvidence] = useState<Record<string, EvidenceRecord>>({});
   const [selectedUnit, setSelectedUnit] = useState<string>('UNIT-0014');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -54,7 +57,9 @@ export default function App() {
   const [actionError, setActionError] = useState('');
   const [showNewUnit, setShowNewUnit] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  const [liveBackend, setLiveBackend] = useState(true);
+  const [dashboardRefreshToken, setDashboardRefreshToken] = useState(0);
+  const [liveBackend, setLiveBackend] = useState(false);
+  const [databaseEngine, setDatabaseEngine] = useState('unknown');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') return 'light';
     return (localStorage.getItem('cube-theme') as 'light' | 'dark') || 'light';
@@ -65,22 +70,60 @@ export default function App() {
     localStorage.setItem('cube-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    let active = true;
+    void fetchCurrentUser()
+      .then((user) => {
+        if (!active) return;
+        setAuthUser(user);
+        setOrg(user.org_id);
+      })
+      .catch(() => {
+        signOut();
+      });
+    return () => { active = false; };
+  }, []);
+
+  const handleAuthenticated = (session: AuthSession) => {
+    setAuthUser(session.user);
+    setOrg(session.user.org_id);
+    setShowAuth(false);
+    setPage('command-center');
+    setActionError('');
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    setAuthUser(null);
+    setOrg('');
+    setShowAuth(false);
+    setPage('landing');
+    window.scrollTo(0, 0);
+    setWorkflows([]);
+    setEvidence({});
+  };
+
   const loadData = useCallback(async () => {
+    if (!org) return;
     setIsRefreshing(true);
     try {
-      const backendUp = await probeBackend();
-      setLiveBackend(backendUp);
-      const [liveWfs, health] = await Promise.all([fetchWorkflows(org), fetchHealth()]);
-      const tenantWorkflows = liveWfs.filter((workflow) => workflow.org_id === org);
-      if (tenantWorkflows.length > 0) {
-        setWorkflows(tenantWorkflows);
-      } else if (!backendUp && import.meta.env.VITE_ALLOW_DEMO_FALLBACK === '1') {
-        setWorkflows(Object.values(DEMO_WORKFLOWS).filter((workflow) => workflow.org_id === org));
-      } else {
-        setWorkflows(tenantWorkflows);
-      }
+      setActionError('');
+      const health = await fetchHealth().catch((error) => {
+        setLiveBackend(false);
+        setDatabaseEngine('unknown');
+        setAgentHealth({});
+        throw error;
+      });
+      setLiveBackend(health.database.status === 'ok');
+      setDatabaseEngine(health.database.engine || 'unknown');
       setAgentHealth(health.agents);
+      const liveWfs = await fetchWorkflows(org);
+      setWorkflows(liveWfs.filter((workflow) => workflow.org_id === org));
       setLastRefresh(new Date());
+    } catch (error) {
+      setWorkflows([]);
+      setEvidence({});
+      setActionError(error instanceof Error ? error.message : 'Could not load records from the configured database.');
     } finally {
       setIsRefreshing(false);
     }
@@ -91,35 +134,33 @@ export default function App() {
   }, [loadData]);
 
   const navigate = (newPage: string, params?: Record<string, string>) => {
+    if (!authUser && newPage !== 'landing') {
+      window.scrollTo(0, 0);
+      setShowAuth(true);
+      return;
+    }
     window.scrollTo(0, 0);
     setPage(newPage as Page);
-    if (params?.unitId) setSelectedUnit(params.unitId);
+    if (params?.unitId) {
+      setSelectedUnit(params.unitId);
+      if (newPage === 'passport') {
+        void fetchWorkflowBundle(params.unitId, org).then((bundle) => {
+          setWorkflows((current) => [bundle.workflow, ...current.filter((item) => item.workflow_id !== bundle.workflow.workflow_id)]);
+          setEvidence((current) => ({ ...current, ...bundle.evidence }));
+        }).catch((error) => {
+          setActionError(error instanceof Error ? error.message : `Could not load the database evidence for ${params.unitId}.`);
+        });
+      }
+    }
     setPageParams(params || {});
   };
 
   const handleRunWorkflow = async (unitId: string) => {
     try {
       setActionError('');
-      let updatedWf: WorkflowState;
-      try {
-        updatedWf = await runWorkflow(unitId, org);
-      } catch (error) {
-        const demo = DEMO_WORKFLOWS[unitId];
-        if (!(error instanceof ApiError) || error.status !== 404 || !demo || demo.org_id !== org) throw error;
-        const receivingEvidence = Object.values(DEMO_EVIDENCE).find(
-          (record) => record.stage === 'receiving' && record.subject.subject_id === unitId && record.subject.org_id === org,
-        );
-        await createUnit({
-          unit_id: unitId,
-          org_id: org,
-          route: demo.stage_results.find((item) => item.stage === 'prep')?.state === 'skipped' ? 'mfn' : 'fba',
-          returned: demo.stage_results.find((item) => item.stage === 'returns')?.state !== 'skipped',
-          sku: receivingEvidence?.subject.refs?.sku?.toString() || 'SKU-DEMO',
-          expected_qty: Number(receivingEvidence?.payload.qty_ordered || 1),
-        });
-        updatedWf = await runWorkflow(unitId, org);
-      }
+      const updatedWf = await runWorkflow(unitId, org);
       setWorkflows((prev) => [updatedWf, ...prev.filter((workflow) => workflow.subject_id !== unitId)]);
+      setDashboardRefreshToken((token) => token + 1);
       const bundle = await fetchWorkflowBundle(unitId, org);
       setEvidence((prev) => ({ ...prev, ...bundle.evidence }));
     } catch (error) {
@@ -132,21 +173,28 @@ export default function App() {
       setActionError('');
       const updatedWf = await applyOverride(unitId, recordId, verdict, actor, reason, org);
       setWorkflows((prev) => [updatedWf, ...prev.filter((workflow) => workflow.subject_id !== unitId)]);
+      setDashboardRefreshToken((token) => token + 1);
       await loadData();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Could not save the review override.');
+      throw error;
     }
   };
 
   const handleRunInspection = async (unitId: string, stage: StageName, payload: any) => {
     const workflow = workflows.find((item) => item.subject_id === unitId);
-    const route = workflow?.stage_results.find((item) => item.stage === 'prep')?.state === 'skipped' ? 'mfn' : 'fba';
-    const returned = workflow?.stage_results.find((item) => item.stage === 'returns')?.state !== 'skipped';
+    const inferredRoute = workflow?.stage_results.find((item) => item.stage === 'prep')?.state === 'skipped' ? 'mfn' : 'fba';
+    const route = String(workflow?.context?.route || inferredRoute).toLowerCase();
+    const returned = typeof workflow?.context?.returned === 'boolean'
+      ? workflow.context.returned
+      : workflow?.stage_results.find((item) => item.stage === 'returns')?.state === 'pending' ||
+        workflow?.stage_results.find((item) => item.stage === 'returns')?.state === 'completed';
     setActionError('');
     try {
       const result = await runStageInspection(unitId, stage, payload, org, route, returned);
       setWorkflows((prev) => [result.workflow, ...prev.filter((item) => item.subject_id !== unitId)]);
       setEvidence((prev) => ({ ...prev, [result.evidence.record_id]: result.evidence }));
+      setDashboardRefreshToken((token) => token + 1);
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : `${stage} inspection failed.`;
@@ -177,6 +225,7 @@ export default function App() {
       order_id: orderId,
     });
     setWorkflows((prev) => [workflow, ...prev.filter((item) => item.subject_id !== unitId)]);
+    setDashboardRefreshToken((token) => token + 1);
     setSelectedUnit(unitId);
     setShowNewUnit(false);
     navigate('receiving', { unitId });
@@ -191,6 +240,7 @@ export default function App() {
           <CommandCenter
             orgId={org}
             workflows={workflows}
+            refreshToken={dashboardRefreshToken}
             liveBackend={liveBackend}
             lastRefresh={lastRefresh}
             isRefreshing={isRefreshing}
@@ -209,12 +259,14 @@ export default function App() {
             unitId={selectedUnit || pageParams.unitId || 'UNIT-0014'}
             workflows={workflows}
             evidence={evidence}
+            onApplyOverride={handleApplyOverride}
           />
         );
       case 'exceptions':
         return (
           <ExceptionsPage
             workflows={workflows}
+            orgId={org}
             onApplyOverride={handleApplyOverride}
           />
         );
@@ -227,6 +279,7 @@ export default function App() {
           <OperationsPage
             workflows={workflows}
             evidence={evidence}
+            refreshToken={dashboardRefreshToken}
             orgId={org}
             agentHealth={agentHealth}
             initialStage={page as StageName}
@@ -242,8 +295,6 @@ export default function App() {
           <div className="space-y-6">
             <AnalyticsPage
               workflows={workflows}
-              demoMode={!liveBackend}
-              demoWorkflows={Object.values(DEMO_WORKFLOWS).filter((workflow) => workflow.org_id === org)}
             />
             <Evaluation org={org} />
           </div>
@@ -255,6 +306,7 @@ export default function App() {
           <CommandCenter
             orgId={org}
             workflows={workflows}
+            refreshToken={dashboardRefreshToken}
             liveBackend={liveBackend}
             lastRefresh={lastRefresh}
             isRefreshing={isRefreshing}
@@ -270,16 +322,31 @@ export default function App() {
     }
   };
 
-  if (page === 'landing') {
+  if (showAuth && !authUser) {
+    return (
+      <AuthPage
+        onAuthenticated={handleAuthenticated}
+        initialMode={authInitialMode}
+        onBack={() => { window.scrollTo(0, 0); setShowAuth(false); setAuthInitialMode('signin'); }}
+        theme={theme}
+        onToggleTheme={() => setTheme((current) => current === 'light' ? 'dark' : 'light')}
+      />
+    );
+  }
+
+  if (page === 'landing' || !authUser) {
     return (
       <>
         <LandingPage
           workflows={workflows}
           evidence={evidence}
-          onNavigate={(p, params) => navigate(p, params)}
-          onOpenNewUnitModal={() => setShowNewUnit(true)}
+          onNavigate={navigate}
+          onSignIn={() => { window.scrollTo(0, 0); setAuthInitialMode('signin'); setShowAuth(true); }}
+          onCreateOrganization={() => { window.scrollTo(0, 0); setAuthInitialMode('organization'); setShowAuth(true); }}
+          theme={theme}
+          onToggleTheme={() => setTheme((current) => current === 'light' ? 'dark' : 'light')}
         />
-        {showNewUnit && <NewUnitModal onClose={() => setShowNewUnit(false)} onCreateUnit={handleCreateUnit} />}
+        {authUser && showNewUnit && <NewUnitModal onClose={() => setShowNewUnit(false)} onCreateUnit={handleCreateUnit} />}
       </>
     );
   }
@@ -348,23 +415,9 @@ export default function App() {
                 />
               </div>
 
-              {/* Org selector */}
-              <div
-                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
-                style={{ background: '#131822', border: '1px solid #1E2D45' }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 pulse-dot" />
-                <select
-                  aria-label="Organization"
-                  value={org}
-                  onChange={(e) => setOrg(e.target.value)}
-                  className="bg-transparent border-0 outline-none cursor-pointer font-poppins font-medium text-slate-300"
-                  style={{ fontSize: 12 }}
-                >
-                  <option value="org_demo_alpha" style={{ background: '#131822' }}>org_demo_alpha</option>
-                  <option value="org_demo_bravo" style={{ background: '#131822' }}>org_demo_bravo</option>
-                </select>
-              </div>
+              <span className="hidden sm:inline max-w-40 truncate text-xs font-medium text-slate-400" title={authUser.org_name}>
+                {authUser.org_name}
+              </span>
 
               {/* Notifications */}
               <button
@@ -400,6 +453,15 @@ export default function App() {
               >
                 <PlusCircle size={14} />
                 <span className="hidden sm:inline">New Unit</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-white/10 hover:text-white"
+                title="Sign out"
+                aria-label="Sign out"
+              >
+                <LogOut size={15} />
               </button>
             </div>
           </header>

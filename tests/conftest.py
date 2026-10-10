@@ -23,7 +23,7 @@ def inproc_by_default(monkeypatch):
 
 def applies(stage: str, case: dict) -> bool:
     return {"receiving": True, "recovery": True, "prep": case["route"] == "fba",
-            "pack": case["route"] == "mfn", "returns": case["returned"]}[stage]
+            "pack": case["route"] in {"fba", "mfn"}, "returns": case["returned"]}[stage]
 
 
 def make_input(stage: str, case: dict, previous=None, overrides=None) -> dict:

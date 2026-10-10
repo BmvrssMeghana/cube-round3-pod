@@ -255,7 +255,7 @@ export const ReceivingModal: React.FC<ReceivingModalProps> = ({ unitId, onClose,
         </div>
 
         {result && (
-          <div className="p-4 rounded-2xl bg-brand-surface border border-brand-yellow/50 space-y-3">
+          <div className="p-4 rounded-2xl bg-brand-surface border border-blue-500/50 space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-syne font-bold text-sm text-[var(--text-primary)]">
                 Receiving Result ({result.evidence?.record_id})

@@ -5,7 +5,7 @@
   "module": "agents.pack.app",
   "url": "http://localhost:8103",
   "version": "1.0.0",
-  "mode": "real",
+  "mode": "inproc",
   "implementation": "real-engine",
   "description": "Pack Manager AI Agent performing outbound order contents verification, SKU matching, 2D box reconciliation, and seal decision."
 }

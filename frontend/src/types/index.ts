@@ -86,6 +86,7 @@ export interface WorkflowState {
   flow_id: string;
   org_id: string;
   subject_id: string;
+  context?: Record<string, any>;
   status: WorkflowStatus;
   status_reason: string;
   current_stage: StageName | null;

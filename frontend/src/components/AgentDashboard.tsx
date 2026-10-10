@@ -14,9 +14,12 @@ type ViewMode = 'table' | 'kanban';
 interface AgentDashboardProps {
   stage: StageName;
   orgId: string;
+  refreshKey: number;
   agentHealth?: { status: string };
   onOpenUnit: (unitId: string) => void;
   onRunInspection: () => void;
+  runDisabled?: boolean;
+  runDisabledReason?: string;
   headerExtra?: React.ReactNode;
 }
 
@@ -25,14 +28,17 @@ const VERDICT_OPTS = ['ALL', 'PASS', 'FAIL', 'UNCERTAIN'] as const;
 export const AgentDashboard: React.FC<AgentDashboardProps> = ({
   stage,
   orgId,
+  refreshKey,
   agentHealth,
   onOpenUnit,
   onRunInspection,
+  runDisabled = false,
+  runDisabledReason,
   headerExtra,
 }) => {
   const spec = STAGE_SPECS[stage];
   const [view, setView] = useState<ViewMode>('table');
-  const [range, setRange] = useState('30d');
+  const [range, setRange] = useState('all');
   const [verdict, setVerdict] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -55,6 +61,9 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
       });
       setData(payload);
       if (!payload) setError('No dashboard data — ensure the orchestrator API is running.');
+    } catch (error) {
+      setData(null);
+      setError(error instanceof Error ? error.message : 'Agent dashboard data could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -62,7 +71,7 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refreshKey]);
 
   const chartVolume = useMemo(() => {
     if (!data?.rows) return [];
@@ -106,7 +115,14 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {headerExtra}
-          <button type="button" className="btn btn-primary" onClick={onRunInspection}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onRunInspection}
+            disabled={runDisabled}
+            title={runDisabled ? runDisabledReason : undefined}
+            style={runDisabled ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
+          >
             Run {stage}
           </button>
           <button type="button" className="btn btn-ghost" onClick={() => void load()} disabled={loading}>
@@ -135,6 +151,7 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
       <div className="card p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <select className="input-field" style={{ width: 140 }} value={range} onChange={(e) => { setRange(e.target.value); setPage(1); }}>
+            <option value="all">All time</option>
             <option value="today">Today</option>
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
@@ -230,7 +247,7 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
                 {!data?.rows?.length ? (
                   <tr><td colSpan={8} className="text-center py-8 text-[var(--text-muted)]">No records match filters.</td></tr>
                 ) : data.rows.map((row: any) => (
-                  <tr key={row.unit_id} className="cursor-pointer" onClick={() => onOpenUnit(row.unit_id)}>
+                  <tr key={row.record_id || row.unit_id} className="cursor-pointer" onClick={() => onOpenUnit(row.unit_id)}>
                     <td className="font-heading font-bold text-blue-600">{row.unit_id}</td>
                     <td>{row.sku || '—'}</td>
                     <td>{(row.route || '—').toString().toUpperCase()}</td>
@@ -262,9 +279,9 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
                 <span className="font-poppins font-semibold text-xs text-[var(--text-primary)]">{col}</span>
                 <span className="badge badge-blue">{(cards as any[]).length}</span>
               </div>
-              {(cards as any[]).slice(0, 8).map((row) => (
+              {(cards as any[]).slice(0, 8).map((row, index) => (
                 <button
-                  key={row.unit_id}
+                  key={row.record_id || `${row.unit_id}-${index}`}
                   type="button"
                   className="w-full text-left rounded-lg p-2"
                   style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}

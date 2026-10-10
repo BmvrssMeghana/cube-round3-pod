@@ -49,7 +49,7 @@ export const RecoveryModal: React.FC<RecoveryModalProps> = ({ unitId, onClose, o
       <div className="bg-brand-card border-2 border-brand-yellow rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto text-[var(--text-primary)]">
         <div className="flex items-center justify-between border-b border-brand-border pb-4">
           <div>
-            <span className="text-[10px] font-poppins text-brand-yellow uppercase tracking-widest block font-bold">
+            <span className="text-[10px] font-poppins text-blue-400 uppercase tracking-widest block font-bold">
               AGENT 05 · RECOVERY MANAGER
             </span>
             <h3 className="font-syne font-extrabold text-xl sm:text-2xl uppercase tracking-tight text-[var(--text-primary)] mt-1">
@@ -67,7 +67,7 @@ export const RecoveryModal: React.FC<RecoveryModalProps> = ({ unitId, onClose, o
 
         {/* CSV Upload Container */}
         <div className="p-4 rounded-2xl bg-brand-surface border border-brand-border space-y-2">
-          <label className="block text-xs font-poppins uppercase text-brand-yellow font-bold">
+          <label className="block text-xs font-poppins uppercase text-blue-400 font-bold">
             Fee / Reimbursement Report CSV (Optional)
           </label>
           <input
@@ -188,7 +188,7 @@ export const RecoveryModal: React.FC<RecoveryModalProps> = ({ unitId, onClose, o
 
             <div className="p-3 rounded-xl bg-brand-card border border-brand-border text-xs font-poppins">
               <strong className="text-[var(--text-primary)]">Upstream Evidence Sources:</strong>{' '}
-              <span className="text-brand-yellow">
+              <span className="text-blue-400">
                 {result.evidence?.upstream_refs?.join(', ') || 'No prior stage evidence'}
               </span>
             </div>
@@ -200,7 +200,7 @@ export const RecoveryModal: React.FC<RecoveryModalProps> = ({ unitId, onClose, o
               >
                 <div className="flex items-center justify-between text-[var(--text-primary)] font-bold">
                   <span>{charge.line_id}: {charge.position}</span>
-                  <span className="text-brand-yellow">${charge.amount_usd}</span>
+                  <span className="text-blue-400">${charge.amount_usd}</span>
                 </div>
                 <p className="text-brand-muted">{charge.reason}</p>
               </div>

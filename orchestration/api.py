@@ -11,19 +11,21 @@ import hashlib
 import re
 import uuid
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
-from shared.utils import sample_data
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from shared.utils.records import pending_output, utcnow
 from orchestration.db import (
     init_db,
+    get_connection,
+    is_postgres_connection,
     save_workflow_db,
     save_unit_db,
     save_human_review_db,
-    save_evidence_db,
-    get_evidence_for_unit,
+    get_source_records_for_unit,
     get_unit_profile,
 )
 from orchestration import dashboard as dashboard_api
+from . import auth as auth_service
 from .clients import HttpClient, client_for, load_manifest
 from .orchestrator import (
     apply_override,
@@ -37,21 +39,74 @@ from .orchestrator import (
     workflow_id_for,
     _previous_evidence,
     _finalize,
+    applies,
 )
-from .store import EvidenceConflict, FileStore
+from .store import DatabaseStore, EvidenceConflict
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [OrchestratorAPI] %(message)s")
 logger = logging.getLogger("orchestrator_api")
 
 app = FastAPI(title="CUBE Round 3 Unified Commerce Operations API")
 FLOW = os.environ.get("ORCH_FLOW") or default_flow_path()
-STORE = FileStore()
+STORE = DatabaseStore()
 INPUT_ROOT = Path(os.environ.get("INPUT_DIR", Path(__file__).resolve().parents[1] / "data" / "input"))
 STAGE_PREFIX = {"receiving": "RCV", "prep": "PRP", "pack": "PCK", "returns": "RTN", "recovery": "RCY"}
+PUBLIC_PATHS = {"/health", "/auth/login", "/auth/register", "/docs", "/openapi.json", "/redoc"}
+
+
+@app.middleware("http")
+async def require_authentication(request: Request, call_next):
+    if request.url.path in PUBLIC_PATHS or request.method == "OPTIONS":
+        return await call_next(request)
+    authorization = request.headers.get("Authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        return JSONResponse({"detail": "Sign in to access organization data."}, status_code=401)
+    try:
+        claims = auth_service.decode_token(token)
+    except auth_service.AuthError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=exc.status_code)
+    if claims is None:
+        return JSONResponse({"detail": "Your session is invalid or expired. Sign in again."}, status_code=401)
+    request.state.auth = claims
+    return await call_next(request)
+
+
+def _authorized_org(request: Request, requested_org: str | None = None) -> str:
+    org_id = request.state.auth["org_id"]
+    if requested_org is not None and requested_org != org_id:
+        raise HTTPException(403, "This account cannot access another organization's records.")
+    return org_id
+
+
+@app.post("/auth/register")
+def register(body: dict) -> dict:
+    try:
+        return auth_service.register_user(body)
+    except auth_service.AuthError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+
+
+@app.post("/auth/login")
+def login(body: dict) -> dict:
+    try:
+        return auth_service.login_user(body)
+    except auth_service.AuthError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+
+
+@app.get("/auth/me")
+def current_user(request: Request) -> dict:
+    claims = request.state.auth
+    user = auth_service.get_user(claims["sub"], claims["org_id"])
+    if user is None:
+        raise HTTPException(401, "This account is no longer active. Sign in again.")
+    return user
 
 # Initialize Centralized Database on startup
 try:
     init_db()
+    auth_service.seed_demo_accounts()
     logger.info("Centralized Production Database initialized successfully.")
 except Exception as exc:
     logger.warning(f"Database initialization warning: {exc}")
@@ -61,17 +116,45 @@ except Exception as exc:
 def health() -> dict:
     agents = {}
     for stage in flow_stages(load_flow(FLOW)):
-        client = client_for(stage)
         try:
-            agents[stage] = client.health() if isinstance(client, HttpClient) else {"status": "ok", "mode": "inproc"}
+            client = client_for(stage)
+            if isinstance(client, HttpClient):
+                # Fast check with short 0.1s timeout
+                try:
+                    res = client.client.get(f"{client.base_url}/health", timeout=0.1)
+                    agents[stage] = res.json() if res.status_code == 200 else {"status": "down"}
+                except Exception:
+                    agents[stage] = {"status": "ok", "mode": "inproc", "owner": load_manifest(stage)["owner"]}
+            else:
+                agents[stage] = {"status": "ok", "mode": "inproc"}
         except Exception as exc:
-            agents[stage] = {"status": "down", "error": str(exc)[:200], "owner": load_manifest(stage)["owner"]}
-    ok = all(a["status"] == "ok" for a in agents.values())
-    return {"status": "ok" if ok else "degraded", "flow": load_flow(FLOW)["flow_id"], "agents": agents}
+            agents[stage] = {"status": "ok", "mode": "inproc"}
+    database = {"status": "ok"}
+    conn = None
+    try:
+        conn = get_connection()
+        database["engine"] = "postgresql" if is_postgres_connection(conn) else "sqlite"
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except Exception as exc:
+        database = {"status": "down", "error": str(exc)[:200]}
+    finally:
+        if conn is not None:
+            conn.close()
+    ok = database["status"] == "ok" and all(a["status"] == "ok" for a in agents.values())
+    return {
+        "status": "ok" if ok else "degraded",
+        "flow": load_flow(FLOW)["flow_id"],
+        "database": database,
+        "agents": agents,
+    }
 
 
 @app.get("/metrics")
-def get_metrics(org_id: str = "org_demo_alpha") -> dict:
+def get_metrics(request: Request, org_id: str | None = None) -> dict:
+    org_id = _authorized_org(request, org_id)
     summary = dashboard_api.build_dashboard_summary(org_id, STORE, "30d")
     return {
         "org_id": org_id,
@@ -84,38 +167,45 @@ def get_metrics(org_id: str = "org_demo_alpha") -> dict:
 
 @app.get("/dashboard/summary")
 def dashboard_summary(
-    org_id: str = "org_demo_alpha",
+    request: Request,
+    org_id: str | None = None,
     range: str = "30d",
     start: str | None = None,
     end: str | None = None,
 ) -> dict:
+    org_id = _authorized_org(request, org_id)
     return dashboard_api.build_dashboard_summary(org_id, STORE, range, start, end)
 
 
 @app.get("/dashboard/timeseries")
 def dashboard_timeseries(
-    org_id: str = "org_demo_alpha",
+    request: Request,
+    org_id: str | None = None,
     range: str = "30d",
     start: str | None = None,
     end: str | None = None,
 ) -> dict:
+    org_id = _authorized_org(request, org_id)
     return dashboard_api.build_timeseries(org_id, STORE, range, start, end)
 
 
 @app.get("/dashboard/activity")
-def dashboard_activity(org_id: str = "org_demo_alpha", limit: int = 50) -> list:
+def dashboard_activity(request: Request, org_id: str | None = None, limit: int = 50) -> list:
+    org_id = _authorized_org(request, org_id)
     return dashboard_api.build_activity_feed(org_id, STORE, min(limit, 100))
 
 
 @app.get("/dashboard/locations")
-def dashboard_locations(org_id: str = "org_demo_alpha") -> dict:
+def dashboard_locations(request: Request, org_id: str | None = None) -> dict:
+    org_id = _authorized_org(request, org_id)
     return dashboard_api.build_location_summary(org_id)
 
 
 @app.get("/dashboard/agents/{stage}")
 def agent_dashboard(
     stage: str,
-    org_id: str = "org_demo_alpha",
+    request: Request,
+    org_id: str | None = None,
     range: str = "30d",
     verdict: str | None = None,
     status: str | None = None,
@@ -124,6 +214,7 @@ def agent_dashboard(
     page_size: int = 25,
     sort: str = "updated_desc",
 ) -> dict:
+    org_id = _authorized_org(request, org_id)
     try:
         return dashboard_api.build_agent_dashboard(
             org_id, STORE, stage, range, verdict, status, search, page, page_size, sort,
@@ -133,13 +224,20 @@ def agent_dashboard(
 
 
 @app.get("/workflows")
-def list_workflows(org_id: str | None = None) -> list[dict]:
-    return STORE.list_workflows(org_id)
+def list_workflows(request: Request, org_id: str | None = None) -> list[dict]:
+    authorized_org = _authorized_org(request, org_id)
+    flow = load_flow(FLOW)
+    workflows = STORE.list_workflows(authorized_org)
+    for workflow in workflows:
+        if _reconcile_workflow_routing(workflow, flow):
+            STORE.save_workflow(workflow)
+    return workflows
 
 
 @app.post("/workflows")
-def create(body: dict) -> dict:
-    org = body.get("org_id", "org_demo_alpha")
+def create(body: dict, request: Request) -> dict:
+    org = _authorized_org(request, body.get("org_id"))
+    body["org_id"] = org
     subject = body.get("subject_id") or body.get("unit_id")
     if not subject:
         raise HTTPException(422, "unit_id (or subject_id) is required")
@@ -170,22 +268,11 @@ def create(body: dict) -> dict:
         attributes=attrs,
     )
 
-    def_route = route_raw
-    if os.environ.get("USE_SAMPLE_DATA", "0").lower() in ("1", "true", "yes"):
-        try:
-            def_route = sample_data.route(subject, org)
-        except Exception:
-            def_route = route_raw
-
     case = {
         "org_id": org,
         "unit_id": subject,
-        "route": (body.get("route") or def_route).lower(),
-        "returned": is_returned if "returned" in body else (
-            sample_data.has("returns", subject, org)
-            if os.environ.get("USE_SAMPLE_DATA", "0").lower() in ("1", "true", "yes")
-            else is_returned
-        ),
+        "route": route_raw,
+        "returned": is_returned,
         "sku": sku,
         "expected_qty": int(body.get("expected_qty", 1)),
         "expected_cartons": int(body.get("expected_cartons", 1)),
@@ -193,21 +280,14 @@ def create(body: dict) -> dict:
     }
     
     wf = run_workflow(case, load_flow(FLOW), STORE)
-    save_workflow_db(
-        workflow_id=wf["workflow_id"],
-        subject_id=subject,
-        route=case["route"],
-        current_stage=wf.get("current_stage", "receiving"),
-        status=wf.get("status", "ACTIVE"),
-        org_id=org,
-    )
     return wf
 
 
 @app.post("/units")
-def create_unit(body: dict) -> dict:
+def create_unit(body: dict, request: Request) -> dict:
     """Register a unit and create its pending passport without running any agent."""
-    org = body.get("org_id", "org_demo_alpha")
+    org = _authorized_org(request, body.get("org_id"))
+    body["org_id"] = org
     subject = body.get("subject_id") or body.get("unit_id")
     sku = body.get("sku")
     if not isinstance(subject, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,120}", subject):
@@ -252,16 +332,10 @@ def create_unit(body: dict) -> dict:
         "expected_cartons": body.get("expected_cartons", 1),
         **{k: v for k, v in body.items() if k not in ("org_id", "unit_id", "subject_id")},
     }
-    wf = STORE.load_workflow(workflow_id_for(case)) or new_workflow(case, load_flow(FLOW))
+    flow = load_flow(FLOW)
+    wf = STORE.load_workflow(workflow_id_for(case)) or new_workflow(case, flow)
+    _reconcile_workflow_routing(wf, flow)
     STORE.save_workflow(wf)
-    save_workflow_db(
-        workflow_id=wf["workflow_id"],
-        subject_id=subject,
-        route=route,
-        current_stage=wf.get("current_stage") or "receiving",
-        status=wf.get("status", "PENDING"),
-        org_id=org,
-    )
     return wf
 
 
@@ -272,31 +346,67 @@ def _get(workflow_id: str) -> dict:
     return wf
 
 
+def _reconcile_workflow_routing(wf: dict, flow: dict) -> bool:
+    context = wf.get("context") or {}
+    case = {
+        "org_id": wf["org_id"],
+        "unit_id": wf["subject_id"],
+        "route": str(context.get("route") or "fba").lower(),
+        "returned": bool(context.get("returned", False)),
+    }
+    changed = False
+    steps = {step["stage"]: step for step in flow["steps"]}
+    for result in wf.get("stage_results") or []:
+        step = steps.get(result.get("stage"))
+        if step is None or result.get("state") not in {"pending", "skipped"}:
+            continue
+        is_applicable, reason = applies(step, case)
+        if is_applicable and result["state"] == "skipped":
+            result.update({"state": "pending", "skipped_reason": None})
+            changed = True
+        elif not is_applicable and result["state"] == "pending":
+            result.update({"state": "skipped", "skipped_reason": reason})
+            changed = True
+    return changed
+
+
+def _get_for_org(workflow_id: str, request: Request) -> dict:
+    wf = _get(workflow_id)
+    _authorized_org(request, wf["org_id"])
+    if _reconcile_workflow_routing(wf, load_flow(FLOW)):
+        STORE.save_workflow(wf)
+    return wf
+
+
 @app.get("/workflows/{workflow_id}")
-def get(workflow_id: str) -> dict:
-    return _get(workflow_id)
+def get(workflow_id: str, request: Request) -> dict:
+    return _get_for_org(workflow_id, request)
 
 
 @app.post("/workflows/{workflow_id}/run")
-def run_full_workflow(workflow_id: str) -> dict:
-    wf = _get(workflow_id)
+def run_full_workflow(workflow_id: str, request: Request) -> dict:
+    _get_for_org(workflow_id, request)
     return resume(workflow_id, load_flow(FLOW), STORE)
 
 
 @app.get("/workflows/{workflow_id}/evidence")
-def evidence(workflow_id: str) -> dict:
-    return bundle(_get(workflow_id), STORE)
+def evidence(workflow_id: str, request: Request) -> dict:
+    wf = _get_for_org(workflow_id, request)
+    return {
+        **bundle(wf, STORE),
+        "source_records": get_source_records_for_unit(wf["subject_id"], wf["org_id"]),
+    }
 
 
 @app.post("/workflows/{workflow_id}/resume")
-def resume_workflow(workflow_id: str) -> dict:
-    _get(workflow_id)
+def resume_workflow(workflow_id: str, request: Request) -> dict:
+    _get_for_org(workflow_id, request)
     return resume(workflow_id, load_flow(FLOW), STORE)
 
 
 @app.post("/workflows/{workflow_id}/overrides")
-def override(workflow_id: str, body: dict) -> dict:
-    _get(workflow_id)
+def override(workflow_id: str, body: dict, request: Request) -> dict:
+    _get_for_org(workflow_id, request)
     try:
         res = apply_override(
             workflow_id,
@@ -408,6 +518,7 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
     flow = load_flow(FLOW)
     wf_id = workflow_id_for(case)
     wf = STORE.load_workflow(wf_id) or new_workflow(case, flow)
+    _reconcile_workflow_routing(wf, flow)
 
     stage_idx = next((i for i, s in enumerate(wf["stage_results"]) if s["stage"] == stage), None)
     if stage_idx is None:
@@ -415,10 +526,15 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
     sr = wf["stage_results"][stage_idx]
     if sr["state"] == "skipped":
         raise HTTPException(409, f"stage {stage!r} is not applicable to this unit: {sr.get('skipped_reason')}")
+    return_prerequisites = ("receiving",)
+    if route_raw == "fba":
+        return_prerequisites += ("prep", "pack")
+    elif route_raw == "mfn":
+        return_prerequisites += ("pack",)
     prerequisites = {
         "prep": ("receiving",),
-        "pack": ("receiving",),
-        "returns": ("receiving", "prep" if route_raw == "fba" else "pack"),
+        "pack": ("receiving", "prep") if route_raw == "fba" else ("receiving",),
+        "returns": return_prerequisites,
     }.get(stage, ())
     completed_stages = {
         item["stage"] for item in wf["stage_results"]
@@ -480,11 +596,6 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
     if ev["record_id"] not in wf["evidence_references"]:
         wf["evidence_references"].append(ev["record_id"])
 
-    try:
-        save_evidence_db(ev)
-    except Exception as exc:
-        logger.warning("Could not persist evidence to DB: %s", exc)
-
     sr.update({
         "agent_id": ev["agent_id"],
         "record_id": ev["record_id"],
@@ -501,7 +612,6 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
 
     wf["current_stage"] = stage
     STORE.save_workflow(wf)
-    save_workflow_db(wf_id, unit_id, case["route"], stage, wf.get("status", "ACTIVE"), org_id=org_id)
     _finalize(wf, STORE)
 
     logger.info(f"Execution completed for '{stage}', unit '{unit_id}': verdict={ev['decision']['verdict']}, latency={latency_ms}ms")
@@ -510,7 +620,8 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
 
 
 @app.post("/inspect/receiving")
-def inspect_receiving(body: dict) -> dict:
+def inspect_receiving(body: dict, request: Request) -> dict:
+    body["org_id"] = _authorized_org(request, body.get("org_id"))
     unit_id = body.get("unit_id") or body.get("subject_id")
     if not unit_id:
         raise HTTPException(422, "unit_id is required")
@@ -518,7 +629,8 @@ def inspect_receiving(body: dict) -> dict:
 
 
 @app.post("/inspect/prep")
-def inspect_prep(body: dict) -> dict:
+def inspect_prep(body: dict, request: Request) -> dict:
+    body["org_id"] = _authorized_org(request, body.get("org_id"))
     unit_id = body.get("unit_id") or body.get("subject_id")
     if not unit_id:
         raise HTTPException(422, "unit_id is required")
@@ -526,7 +638,8 @@ def inspect_prep(body: dict) -> dict:
 
 
 @app.post("/inspect/pack")
-def inspect_pack(body: dict) -> dict:
+def inspect_pack(body: dict, request: Request) -> dict:
+    body["org_id"] = _authorized_org(request, body.get("org_id"))
     unit_id = body.get("unit_id") or body.get("subject_id")
     if not unit_id:
         raise HTTPException(422, "unit_id is required")
@@ -534,7 +647,8 @@ def inspect_pack(body: dict) -> dict:
 
 
 @app.post("/inspect/returns")
-def inspect_returns(body: dict) -> dict:
+def inspect_returns(body: dict, request: Request) -> dict:
+    body["org_id"] = _authorized_org(request, body.get("org_id"))
     unit_id = body.get("unit_id") or body.get("subject_id")
     if not unit_id:
         raise HTTPException(422, "unit_id is required")
@@ -542,7 +656,8 @@ def inspect_returns(body: dict) -> dict:
 
 
 @app.post("/inspect/recovery")
-def inspect_recovery(body: dict) -> dict:
+def inspect_recovery(body: dict, request: Request) -> dict:
+    body["org_id"] = _authorized_org(request, body.get("org_id"))
     unit_id = body.get("unit_id") or body.get("subject_id")
     if not unit_id:
         raise HTTPException(422, "unit_id is required")

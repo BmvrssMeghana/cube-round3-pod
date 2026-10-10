@@ -55,7 +55,7 @@ export const PrepModal: React.FC<PrepModalProps> = ({ unitId, onClose, onRunInsp
       <div className="bg-brand-card border-2 border-brand-yellow rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto text-[var(--text-primary)]">
         <div className="flex items-center justify-between border-b border-brand-border pb-4">
           <div>
-            <span className="text-[10px] font-poppins text-brand-yellow uppercase tracking-widest block font-bold">
+            <span className="text-[10px] font-poppins text-blue-400 uppercase tracking-widest block font-bold">
               AGENT 02 · PREP MANAGER (FBA)
             </span>
             <h3 className="font-syne font-extrabold text-xl sm:text-2xl uppercase tracking-tight text-[var(--text-primary)] mt-1">

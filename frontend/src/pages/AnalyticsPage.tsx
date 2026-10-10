@@ -4,8 +4,6 @@ import { BarChart3, DollarSign, CheckCircle, AlertTriangle, TrendingUp } from 'l
 
 interface AnalyticsPageProps {
   workflows: WorkflowState[];
-  demoMode: boolean;
-  demoWorkflows: WorkflowState[];
 }
 
 function HorizontalBar({ value, max, color }: { value: number; max: number; color: string }) {
@@ -20,8 +18,8 @@ function HorizontalBar({ value, max, color }: { value: number; max: number; colo
   );
 }
 
-export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ workflows, demoMode, demoWorkflows }) => {
-  const analysisWorkflows = demoMode ? demoWorkflows : workflows;
+export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ workflows }) => {
+  const analysisWorkflows = workflows;
   const totalUnits = analysisWorkflows.length;
   const passedUnits = analysisWorkflows.filter((w) => w.status === 'COMPLETED').length;
   const haltedUnits = analysisWorkflows.filter((w) => w.status === 'HALTED' || w.status === 'DEGRADED').length;
@@ -137,35 +135,6 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ workflows, demoMod
           Agent accuracy metrics, claim dispute recovery performance, and automated audit SLA tracking.
         </p>
       </div>
-
-      {demoMode && (
-        <section
-          className="card space-y-3 border-[var(--border-active)] p-5"
-          style={{ backgroundColor: 'var(--accent-soft)', borderColor: 'var(--border-active)' }}
-          aria-labelledby="demo-analysis-title"
-        >
-          <div>
-            <p className="font-poppins text-xs font-semibold uppercase tracking-wider text-[var(--accent-strong)]">
-              Sample data · not live financial results
-            </p>
-            <h2 id="demo-analysis-title" className="font-heading text-lg font-bold text-[var(--text-primary)]">
-              Demo analysis
-            </h2>
-          </div>
-          <p className="text-sm text-[var(--text-secondary)]">
-            {totalExecutions} completed stage checks across {totalUnits} sample workflows produced a {passRate}% pass rate
-            ({globalPass} passed, {globalFail} failed, {globalUncertain} uncertain).
-          </p>
-          <p className="text-sm text-[var(--text-secondary)]">
-            {claimRecommendations.length} recovery claim recommendations total {formattedClaimValue}. This is suggested claim
-            value only; it is not confirmed as recovered or approved.
-          </p>
-          <p className="text-sm text-[var(--text-secondary)]">
-            Recovery is the main review point in this sample: {stageData.find((stage) => stage.stage === 'recovery')?.fail ?? 0} failed
-            and {stageData.find((stage) => stage.stage === 'recovery')?.uncertain ?? 0} uncertain recovery checks need evidence review.
-          </p>
-        </section>
-      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

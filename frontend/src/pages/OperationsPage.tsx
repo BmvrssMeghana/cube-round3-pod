@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Package, CheckCircle, Box, RotateCcw, DollarSign, Info } from 'lucide-react';
 import type { WorkflowState, EvidenceRecord, StageName } from '../types';
 import { ReceivingModal } from '../components/ReceivingModal';
 import { PrepModal } from '../components/PrepModal';
@@ -7,11 +8,12 @@ import { ReturnsModal } from '../components/ReturnsModal';
 import { RecoveryModal } from '../components/RecoveryModal';
 import { AgentDashboard } from '../components/AgentDashboard';
 import { STAGE_SPECS } from '../data/agentSpecs';
-import { Package, CheckCircle, Box, RotateCcw, DollarSign, Info } from 'lucide-react';
+import { UnitSearchSelector } from '../components/UnitSearchSelector';
 
 interface OperationsPageProps {
   workflows: WorkflowState[];
   evidence: Record<string, EvidenceRecord>;
+  refreshToken: number;
   initialStage: StageName;
   initialUnitId: string;
   orgId: string;
@@ -35,6 +37,7 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
   initialStage,
   initialUnitId,
   orgId,
+  refreshToken,
   agentHealth,
   onSelectStage,
   onSelectUnit,
@@ -52,11 +55,13 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
   const stageRes = currentWf?.stage_results.find((s) => s.stage === activeStage);
   const stageSkipped = stageRes?.state === 'skipped';
   const spec = STAGE_SPECS[activeStage];
+  const route = String(currentWf?.context?.route || '').toLowerCase();
+  const routePrerequisite = route === 'fba' ? 'prep' : route === 'mfn' ? 'pack' : null;
 
   const requiredStages: StageName[] = activeStage === 'prep' || activeStage === 'pack'
-    ? ['receiving']
+    ? activeStage === 'pack' && route === 'fba' ? ['receiving', 'prep'] : ['receiving']
     : activeStage === 'returns'
-      ? ['receiving', currentWf?.stage_results.find((item) => item.stage === 'prep')?.state === 'skipped' ? 'pack' : 'prep']
+      ? ['receiving', ...(route === 'fba' ? ['prep' as StageName] : []), 'pack']
       : [];
 
   const missingPrerequisites = requiredStages.filter((required) => {
@@ -65,20 +70,12 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
   });
 
   const unitSelector = (
-    <select
-      value={selectedUnit}
-      onChange={(e) => onSelectUnit(e.target.value)}
-      className="input-field"
-      style={{ width: 180 }}
-      aria-label="Target unit"
-    >
-      {workflows.map((w) => (
-        <option key={w.subject_id} value={w.subject_id}>
-          {w.subject_id} · {w.status}
-        </option>
-      ))}
-      {workflows.length === 0 && <option value="">Create a unit first</option>}
-    </select>
+    <UnitSearchSelector
+      workflows={workflows}
+      selectedUnitId={selectedUnit}
+      onSelectUnit={onSelectUnit}
+      width={220}
+    />
   );
 
   return (
@@ -137,6 +134,9 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
         agentHealth={agentHealth?.[activeStage]}
         onOpenUnit={onOpenPassport}
         onRunInspection={() => setActiveModal(activeStage)}
+        refreshKey={refreshToken}
+        runDisabled={stageSkipped || missingPrerequisites.length > 0}
+        runDisabledReason={stageSkipped ? stageRes?.skipped_reason || 'This stage is not applicable to this unit.' : `Complete upstream stages first: ${missingPrerequisites.join(', ')}.`}
         headerExtra={unitSelector}
       />
 
@@ -149,11 +149,30 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
         <ReceivingModal
           unitId={selectedUnit}
           onClose={() => setActiveModal(null)}
-          onRunInspection={(unitId, payload) => onRunInspection(unitId, 'receiving', payload)}
+          onRunInspection={async (unitId, payload) => {
+            const result = await onRunInspection(unitId, 'receiving', payload);
+            if (result.evidence?.decision?.verdict === 'PASS') {
+              const nextStage: StageName = route === 'mfn' ? 'pack' : 'prep';
+              onSelectStage(nextStage);
+              setActiveModal(nextStage);
+            }
+            return result;
+          }}
         />
       )}
       {activeModal === 'prep' && (
-        <PrepModal unitId={selectedUnit} onClose={() => setActiveModal(null)} onRunInspection={(unitId, payload) => onRunInspection(unitId, 'prep', payload)} />
+        <PrepModal
+          unitId={selectedUnit}
+          onClose={() => setActiveModal(null)}
+          onRunInspection={async (unitId, payload) => {
+            const result = await onRunInspection(unitId, 'prep', payload);
+            if (result.evidence?.decision?.verdict === 'PASS') {
+              onSelectStage('pack');
+              setActiveModal('pack');
+            }
+            return result;
+          }}
+        />
       )}
       {activeModal === 'pack' && (
         <PackModal unitId={selectedUnit} onClose={() => setActiveModal(null)} onRunInspection={(unitId, payload) => onRunInspection(unitId, 'pack', payload)} />

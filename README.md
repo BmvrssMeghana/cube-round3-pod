@@ -52,9 +52,17 @@ make test             # integration, end-to-end, failure, UNCERTAIN, override an
 make run              # all sample workflows end to end -> out/workflows/*.json and out/evidence/*.json
 make case UNIT=UNIT-0014 ORG=org_demo_alpha     # one workflow, in full
 make serve            # orchestrator API on :8100 (POST /workflows, GET /workflows/{id}, GET /health)
+python scripts/import_sample_csv_to_db.py       # import all supplied sample CSV rows into configured SQL
+python scripts/verify_db.py                     # report engine and source/unit/workflow counts
 ```
 
-Out of the box everything runs on **organiser stub agents** replaying the synthetic Round 2 CSVs. **Replacing a stub with your real agent is your job.**
+The website's API stores workflow state and evidence in the configured SQL database. Set `DATABASE_URL` to your PostgreSQL connection string before importing or starting the API; with no PostgreSQL URL configured, the app uses `data/cube_unified.db` (SQLite). The import is safe to rerun and preserves organization scope and source CSV rows for review traceability. The CLI command `make run` remains a separate file-based stub workflow runner.
+
+The web app requires an account. Set `AUTH_TOKEN_SECRET` in `.env` to a unique random value of at least 32 characters before starting the API (for example, generate one with `python -c "import secrets; print(secrets.token_urlsafe(48))"`). For local/demo use, the API creates `org_alpha` / `root` and `org_bravo` / `root` accounts once if they do not already exist; change or remove these accounts before production deployment. Both demo logins are scoped to their existing Team Alpha/Bravo data organizations. Additional users may join Alpha/Bravo when private invite codes are configured with `CUBE_ALPHA_INVITE_CODE` or `CUBE_BRAVO_INVITE_CODE`, or create a new organization. The selected organization is bound to the account and enforced by the API; it cannot be switched in the command center.
+
+Dashboard execution history is read from saved evidence records, so rerunning a stage adds a history entry instead of replacing earlier results. The Command Center and agent dashboards default to **All Time**; date filters can narrow the view.
+
+Out of the box everything runs on **organiser stub agents** in-process, replaying the synthetic Round 2 CSVs. The agent manifests default to `inproc`; set `ORCH_MODE=http` (and start each agent service) to call them over HTTP. **Replacing a stub with your real agent is your job.**
 
 Run an agent as its own service:
 
@@ -80,7 +88,10 @@ Copy `.env.example` to `.env`. **Never commit `.env`.**
 | `ORCH_MODE` | Force `inproc` or `http` for all agents | each `agent.json` |
 | `ORCH_FLOW` | Flow file for the API | the flow in `pod.json` |
 | `<STAGE>_URL` | Where an `http`-mode agent listens (`PREP_URL`, …) | `agent.json` `url` |
-| `OUT_DIR` | Where workflow state and evidence are written | `out` |
+| `DATABASE_URL` / `POSTGRES_URL` | PostgreSQL connection string for API state, evidence, and CSV imports | local SQLite database |
+| `AUTH_TOKEN_SECRET` | Signing key for account bearer tokens; required and at least 32 characters | none |
+| `CUBE_ALPHA_INVITE_CODE`, `CUBE_BRAVO_INVITE_CODE` | Private codes required to register into Team Alpha/Bravo | registration into that team disabled |
+| `OUT_DIR` | Where the separate file-based CLI runner writes workflow state and evidence | `out` |
 | `DATA_DIR`, `INPUT_DIR` | Sample CSVs for the stubs; your per-stage captures | `data/sample`, `data/input` |
 | `LOG_LEVEL`, `LOG_FORMAT` | Logging | `WARNING`, `json` |
 | Model provider keys | Whatever *your* agents use (e.g. `ANTHROPIC_API_KEY`) | none |

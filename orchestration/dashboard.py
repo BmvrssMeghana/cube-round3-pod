@@ -37,6 +37,13 @@ def _parse_ts(value: Any) -> Optional[datetime]:
     return None
 
 
+def _sort_timestamp(value: Any) -> str:
+    parsed = _parse_ts(value)
+    if parsed is None:
+        return ""
+    return parsed.astimezone(timezone.utc).isoformat()
+
+
 def resolve_date_range(
     range_key: str = "30d",
     custom_start: Optional[str] = None,
@@ -45,6 +52,9 @@ def resolve_date_range(
     """Return (start, end, prev_start, prev_end) for trend comparison."""
     end = _utcnow()
     key = (range_key or "30d").lower()
+    if key == "all":
+        start = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        return start, end, None, None
     if key == "custom" and custom_start and custom_end:
         start = _parse_ts(custom_start) or (end - timedelta(days=30))
         end = _parse_ts(custom_end) or end
@@ -81,7 +91,7 @@ def _query_evidence(org_id: str, start: datetime, end: datetime, stage: Optional
     records: List[dict] = []
     keys = [
         "evidence_id", "workflow_id", "unit_id", "stage", "verdict", "confidence",
-        "reason", "model_name", "model_version", "vision_mode", "metadata_json", "created_at",
+        "reason", "model_name", "model_version", "vision_mode", "metadata_json", "evidence_data", "created_at",
     ]
     stage_clause = ""
     params: list = [org_id, start.isoformat(), end.isoformat()]
@@ -90,7 +100,7 @@ def _query_evidence(org_id: str, start: datetime, end: datetime, stage: Optional
         params.append(stage)
     sql = f"""
         SELECT e.evidence_id, e.workflow_id, e.unit_id, e.stage, e.verdict, e.confidence,
-               e.reason, e.model_name, e.model_version, e.vision_mode, e.metadata_json, e.created_at
+               e.reason, e.model_name, e.model_version, e.vision_mode, e.metadata_json, e.evidence_data, e.created_at
         FROM evidence_records e
         JOIN workflows w ON w.workflow_id = e.workflow_id
         WHERE w.org_id = {'?' if not is_pg else '%s'}
@@ -105,11 +115,15 @@ def _query_evidence(org_id: str, start: datetime, end: datetime, stage: Optional
             cur.execute(sql, tuple(params))
             for row in cur.fetchall():
                 rec = _row_dict(row, is_pg, keys)
-                if isinstance(rec.get("metadata_json"), str):
-                    try:
-                        rec["payload"] = json.loads(rec["metadata_json"])
-                    except Exception:
-                        rec["payload"] = {}
+                for source, target in (("metadata_json", "payload"), ("evidence_data", "evidence")):
+                    value = rec.get(source)
+                    if isinstance(value, str):
+                        try:
+                            rec[target] = json.loads(value)
+                        except json.JSONDecodeError:
+                            rec[target] = {}
+                    else:
+                        rec[target] = value or {}
                 records.append(rec)
     finally:
         conn.close()
@@ -279,6 +293,33 @@ def _verdict_totals_from_evidence(records: List[dict]) -> Dict[str, int]:
     return counts
 
 
+def _agent_performance_from_evidence(records: List[dict]) -> dict:
+    performance = {
+        stage: {"PASS": 0, "FAIL": 0, "UNCERTAIN": 0, "completed_in_period": 0}
+        for stage in STAGES
+    }
+    for record in records:
+        stage = record.get("stage")
+        verdict = (record.get("verdict") or "").upper()
+        evidence = record.get("evidence") or {}
+        if (
+            stage in performance
+            and verdict in VERDICTS
+            and evidence.get("status", "completed") == "completed"
+        ):
+            performance[stage][verdict] += 1
+            performance[stage]["completed_in_period"] += 1
+    return {
+        stage: {
+            "pass": counts["PASS"],
+            "fail": counts["FAIL"],
+            "uncertain": counts["UNCERTAIN"],
+            "completed_in_period": counts["completed_in_period"],
+        }
+        for stage, counts in performance.items()
+    }
+
+
 def _trend_pct(current: float, previous: float) -> Optional[float]:
     if previous <= 0:
         return None if current <= 0 else 100.0
@@ -290,6 +331,7 @@ def build_dashboard_summary(org_id: str, store, range_key: str = "30d", custom_s
     workflows = store.list_workflows(org_id)
     wf_metrics = _workflow_metrics(workflows, start, end)
     evidence = _query_evidence(org_id, start, end)
+    agent_performance = _agent_performance_from_evidence(evidence)
     prev_evidence = _query_evidence(org_id, prev_start, prev_end) if prev_start and prev_end else []
     verdicts = _verdict_totals_from_evidence(evidence)
     prev_verdicts = _verdict_totals_from_evidence(prev_evidence)
@@ -336,12 +378,7 @@ def build_dashboard_summary(org_id: str, store, range_key: str = "30d", custom_s
         },
         "funnel": wf_metrics["funnel"],
         "agent_performance": {
-            stage: {
-                "pass": wf_metrics["stage_verdicts"][stage]["PASS"],
-                "fail": wf_metrics["stage_verdicts"][stage]["FAIL"],
-                "uncertain": wf_metrics["stage_verdicts"][stage]["UNCERTAIN"],
-                "completed_in_period": wf_metrics["stage_totals"].get(stage, 0),
-            }
+            stage: agent_performance[stage]
             for stage in STAGES
         },
         "verdict_distribution": {
@@ -365,13 +402,15 @@ def build_dashboard_summary(org_id: str, store, range_key: str = "30d", custom_s
 def build_timeseries(org_id: str, store, range_key: str = "30d", custom_start: Optional[str] = None, custom_end: Optional[str] = None) -> dict:
     start, end, _, _ = resolve_date_range(range_key, custom_start, custom_end)
     days = max(1, (end - start).days)
-    bucket = "hour" if days <= 2 else "day" if days <= 60 else "week"
+    bucket = "hour" if days <= 2 else "day" if days <= 60 else "week" if days <= 365 else "month"
 
     def bucket_key(ts: datetime) -> str:
         if bucket == "hour":
             return ts.strftime("%Y-%m-%dT%H:00")
         if bucket == "week":
             return ts.strftime("%Y-W%W")
+        if bucket == "month":
+            return ts.strftime("%Y-%m")
         return ts.strftime("%Y-%m-%d")
 
     buckets: Dict[str, dict] = {}
@@ -491,7 +530,7 @@ def build_activity_feed(org_id: str, store, limit: int = 50) -> List[dict]:
 
 
 def build_location_summary(org_id: str) -> dict:
-    """No geographic coordinates in schema — summarize by channel/route."""
+    """Summarize registered units by their operational fulfillment route."""
     conn = get_connection()
     is_pg = _is_pg(conn)
     rows: List[dict] = []
@@ -506,7 +545,12 @@ def build_location_summary(org_id: str) -> dict:
                 rows.append({"label": (channel or "unknown").upper(), "count": int(count), "kind": "fulfillment_route"})
     finally:
         conn.close()
-    return {"has_geographic_data": False, "summary": rows, "note": "CUBE stores channel (FBA/MFN), not shipment coordinates."}
+    total = sum(row["count"] for row in rows)
+    return {
+        "summary": rows,
+        "total_units": total,
+        "note": f"{total} registered units grouped by fulfillment route.",
+    }
 
 
 def build_agent_dashboard(
@@ -549,25 +593,22 @@ def build_agent_dashboard(
     finally:
         conn.close()
 
-    stage_evidence = _query_evidence(org_id, datetime(1970, 1, 1, tzinfo=timezone.utc), _utcnow(), stage)
-    ev_by_unit: Dict[str, dict] = {}
+    workflows_by_id = {wf.get("workflow_id"): wf for wf in workflows}
+    stage_evidence = _query_evidence(org_id, start, end, stage)
+    workflows_with_stage_evidence = {ev.get("workflow_id") for ev in stage_evidence}
     for ev in stage_evidence:
-        ev_by_unit[ev["unit_id"]] = ev
-
-    for wf in workflows:
-        uid = wf.get("subject_id")
-        sr = next((s for s in (wf.get("stage_results") or []) if s.get("stage") == stage), None)
-        if not sr or sr.get("state") == "skipped":
-            continue
+        uid = ev.get("unit_id")
+        wf = workflows_by_id.get(ev.get("workflow_id"), {})
+        sr = next(
+            (item for item in (wf.get("stage_results") or []) if item.get("stage") == stage),
+            {},
+        )
         profile = unit_profiles.get(uid, {})
-        finished = _parse_ts(sr.get("finished_at"))
-        updated = _parse_ts((wf.get("timestamps") or {}).get("updated_at"))
-        if finished and not _in_range(finished, start, end) and updated and not _in_range(updated, start, end):
-            if range_key not in ("90d", "custom"):
-                pass
-
-        v = (sr.get("verdict") or "").upper() or None
-        row_status = sr.get("state") or "pending"
+        evidence_data = ev.get("evidence") or {}
+        decision = evidence_data.get("decision") or {}
+        record_id = ev.get("evidence_id")
+        v = (ev.get("verdict") or "").upper() or None
+        row_status = "completed" if evidence_data.get("status", "completed") == "completed" else "error"
         if verdict and v != verdict.upper():
             continue
         if status_filter and row_status != status_filter:
@@ -576,9 +617,54 @@ def build_agent_dashboard(
         if search and search.lower() not in hay:
             continue
 
-        ev = ev_by_unit.get(uid)
-        checks = (ev or {}).get("payload", {}).get("checks", []) if ev else []
+        payload = ev.get("payload") or {}
+        checks = payload.get("checks", [])
+        rows.append({
+            "unit_id": uid,
+            "workflow_id": ev.get("workflow_id"),
+            "sku": profile.get("sku"),
+            "fnsku": profile.get("fnsku"),
+            "order_id": profile.get("order_id"),
+            "route": profile.get("channel") or wf.get("route"),
+            "execution_status": row_status,
+            "evidence_status": evidence_data.get("status"),
+            "verdict": v,
+            "needs_human": decision.get("needs_human"),
+            "duration_ms": sr.get("duration_ms") if sr.get("record_id") == record_id else None,
+            "finished_at": ev.get("created_at"),
+            "updated_at": ev.get("created_at"),
+            "record_id": record_id,
+            "checks_count": len(checks),
+            "kanban_column": _kanban_column(
+                {
+                    "state": row_status,
+                    "evidence_status": evidence_data.get("status"),
+                    "verdict": v,
+                    "needs_human": decision.get("needs_human"),
+                },
+                wf,
+            ),
+        })
 
+    for wf in workflows:
+        uid = wf.get("subject_id")
+        sr = next((item for item in (wf.get("stage_results") or []) if item.get("stage") == stage), None)
+        if not sr or sr.get("state") in ("skipped", "completed", "error"):
+            continue
+        if wf.get("workflow_id") in workflows_with_stage_evidence:
+            continue
+        if range_key != "all":
+            updated = _parse_ts((wf.get("timestamps") or {}).get("updated_at"))
+            if not _in_range(updated, start, end):
+                continue
+        profile = unit_profiles.get(uid, {})
+        if verdict:
+            continue
+        hay = f"{uid} {profile.get('sku', '')} {profile.get('order_id', '')}".lower()
+        if search and search.lower() not in hay:
+            continue
+        if status_filter and sr.get("state") != status_filter:
+            continue
         rows.append({
             "unit_id": uid,
             "workflow_id": wf.get("workflow_id"),
@@ -586,25 +672,25 @@ def build_agent_dashboard(
             "fnsku": profile.get("fnsku"),
             "order_id": profile.get("order_id"),
             "route": profile.get("channel") or wf.get("route"),
-            "execution_status": row_status,
+            "execution_status": sr.get("state") or "pending",
             "evidence_status": sr.get("evidence_status"),
-            "verdict": v,
+            "verdict": sr.get("verdict"),
             "needs_human": sr.get("needs_human"),
             "duration_ms": sr.get("duration_ms"),
             "finished_at": sr.get("finished_at"),
             "updated_at": (wf.get("timestamps") or {}).get("updated_at"),
             "record_id": sr.get("record_id"),
-            "checks_count": len(checks),
+            "checks_count": 0,
             "kanban_column": _kanban_column(sr, wf),
         })
 
     sort_key = {
         "unit_asc": lambda r: r["unit_id"] or "",
         "unit_desc": lambda r: r["unit_id"] or "",
-        "updated_desc": lambda r: r.get("updated_at") or "",
-        "updated_asc": lambda r: r.get("updated_at") or "",
+        "updated_desc": lambda r: (_sort_timestamp(r.get("updated_at")), r.get("record_id") or ""),
+        "updated_asc": lambda r: (_sort_timestamp(r.get("updated_at")), r.get("record_id") or ""),
         "verdict": lambda r: r.get("verdict") or "",
-    }.get(sort, lambda r: r.get("updated_at") or "")
+    }.get(sort, lambda r: _sort_timestamp(r.get("updated_at")))
     reverse = sort not in ("unit_asc", "updated_asc")
     rows.sort(key=sort_key, reverse=reverse)
 
@@ -612,7 +698,7 @@ def build_agent_dashboard(
     start_idx = (max(1, page) - 1) * page_size
     page_rows = rows[start_idx : start_idx + page_size]
 
-    perf = build_dashboard_summary(org_id, store, range_key)["agent_performance"].get(stage, {})
+    perf = _agent_performance_from_evidence(stage_evidence).get(stage, {})
     return {
         "stage": stage,
         "range": {"key": range_key, "start": start.isoformat(), "end": end.isoformat()},

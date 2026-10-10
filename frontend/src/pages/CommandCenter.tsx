@@ -3,22 +3,18 @@ import type { WorkflowState } from '../types';
 import {
   Package, CheckCircle, Box, RotateCcw, DollarSign,
   AlertTriangle, TrendingUp, TrendingDown, Activity,
-  Filter, RefreshCw, Eye, Play, BarChart2, MapPin,
+  Filter, RefreshCw, Eye, Play, BarChart2,
 } from 'lucide-react';
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Legend,
-} from 'recharts';
-import {
   fetchDashboardActivity,
-  fetchDashboardLocations,
   fetchDashboardSummary,
-  fetchDashboardTimeseries,
   type DashboardSummary,
 } from '../services/api';
 
 interface CommandCenterProps {
   orgId: string;
   workflows: WorkflowState[];
+  refreshToken: number;
   liveBackend: boolean;
   lastRefresh: Date | null;
   isRefreshing: boolean;
@@ -31,9 +27,10 @@ interface CommandCenterProps {
   onOpenNewUnitModal: () => void;
 }
 
-type DateRange = 'today' | '7d' | '30d' | '90d';
+type DateRange = 'all' | 'today' | '7d' | '30d' | '90d';
 
 const DATE_OPTIONS: { value: DateRange; label: string }[] = [
+  { value: 'all',   label: 'All Time' },
   { value: 'today', label: 'Today' },
   { value: '7d',    label: 'Last 7 Days' },
   { value: '30d',   label: 'Last 30 Days' },
@@ -47,6 +44,238 @@ const AGENTS = [
   { id: 'returns',   label: 'Returns',   num: '04', icon: RotateCcw,   color: '#F59E0B' },
   { id: 'recovery',  label: 'Recovery',  num: '05', icon: DollarSign,  color: '#A855F7' },
 ];
+
+const ISSUE_CATEGORIES = [
+  { label: 'Refund & reimbursement', color: '#8B5CF6' },
+  { label: 'Technical', color: '#0EA5E9' },
+  { label: 'Damaged goods', color: '#EF4444' },
+  { label: 'Quantity mismatch', color: '#F59E0B' },
+  { label: 'Identity mismatch', color: '#EC4899' },
+  { label: 'Packaging & compliance', color: '#14B8A6' },
+  { label: 'Packing & fulfillment', color: '#06B6D4' },
+  { label: 'Returns & disposition', color: '#6366F1' },
+  { label: 'Fees & recovery', color: '#A855F7' },
+  { label: 'Other operational', color: '#64748B' },
+] as const;
+
+const LIFECYCLE_OUTCOMES = [
+  { key: 'completed', label: 'Completed', color: '#22C55E' },
+  { key: 'exception', label: 'Exception', color: '#EF4444' },
+  { key: 'human_review', label: 'Human Review', color: '#F59E0B' },
+  { key: 'in_progress', label: 'In Progress', color: '#3B82F6' },
+  { key: 'incomplete', label: 'Incomplete', color: '#94A3B8' },
+] as const;
+
+type IssueCategory = typeof ISSUE_CATEGORIES[number]['label'];
+type LifecycleOutcome = typeof LIFECYCLE_OUTCOMES[number]['key'];
+
+function lifecycleOutcome(workflow: WorkflowState): LifecycleOutcome {
+  const status = String(workflow.status || '').toUpperCase();
+  const finalOutcome = String(workflow.final_outcome?.outcome || workflow.final_outcome?.status || '').toUpperCase();
+  const stages = workflow.stage_results || [];
+  if (
+    stages.some((stage) => stage.needs_human) ||
+    ['NEEDS_REVIEW', 'HUMAN_REVIEW'].includes(finalOutcome) ||
+    status === 'BLOCKED'
+  ) return 'human_review';
+  if (
+    ['EXCEPTION', 'CLAIM_RECOMMENDED'].includes(finalOutcome) ||
+    ['HALTED', 'DEGRADED', 'EXCEPTION'].includes(status)
+  ) return 'exception';
+  if (finalOutcome === 'INCOMPLETE') return 'incomplete';
+  if (status === 'COMPLETED' || finalOutcome === 'CLEAN') return 'completed';
+  if (['PENDING', 'IN_PROGRESS', 'ACTIVE', 'RUNNING', 'RECOVERY_REQUIRED'].includes(status)) return 'in_progress';
+  return 'incomplete';
+}
+
+function issueCategory(workflow: WorkflowState, stage: WorkflowState['stage_results'][number]): IssueCategory {
+  const context = workflow.context || {};
+  const attributes = context.attributes || {};
+  const stageRecord = attributes.stage_records?.[stage.stage] || {};
+  const sourceRows = attributes.source_records?.[stage.stage] || [];
+  const identityMatch = String(stageRecord.identity_match || '').toLowerCase();
+  if (['no', 'false', 'mismatch'].includes(identityMatch)) return 'Identity mismatch';
+  if (
+    stage.stage === 'pack' &&
+    stageRecord.order_lines &&
+    stageRecord.observed_in_box &&
+    stageRecord.order_lines !== stageRecord.observed_in_box
+  ) return 'Packing & fulfillment';
+  const valuesOnly = (value: unknown): string => {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (Array.isArray(value)) return value.map(valuesOnly).join(' ');
+    if (value && typeof value === 'object') return Object.values(value).map(valuesOnly).join(' ');
+    return '';
+  };
+  const issueText = valuesOnly([
+    stage.error,
+    workflow.status_reason,
+    stageRecord,
+    sourceRows,
+    workflow.errors,
+    stage.stage === 'recovery' ? context.fee_lines || attributes.fee_lines : '',
+  ]).toLowerCase();
+
+  if (/\b(refund|reimburse(?:ment)?|chargeback|credit issued)\b/.test(issueText)) return 'Refund & reimbursement';
+  if (/\b(technical|system|api|timeout|unavailable|integration|scanner|software|device error|attributeerror|connecterror|connection refused)\b/.test(issueText)) return 'Technical';
+  if (/\b(damag(?:e|ed)|crush(?:ed|ing)?|water|tear(?:s|ing)?|puncture|broken|dent(?:ed)?)\b/.test(issueText)) return 'Damaged goods';
+  if (/\b(identity|sku mismatch|asin mismatch|variant mismatch|look.?alike|wrong sku)\b/.test(issueText)) return 'Identity mismatch';
+  if (/\b(quantity|qty|shortfall|missing (?:items?|parts?|components?)|under.?count)\b/.test(issueText)) return 'Quantity mismatch';
+  if (/\b(packag(?:e|ing)|polybag|fnsku|label|barcode|prep_required|prep_completed|seal)\b/.test(issueText)) return 'Packaging & compliance';
+  if (/\b(pack|packed|packing|fulfillment|fulfilment|order lines|in box)\b/.test(issueText)) return 'Packing & fulfillment';
+  if (/\b(return|disposition|restock|unsellable)\b/.test(issueText)) return 'Returns & disposition';
+  if (/\b(fee|charge|recovery|claim|reimbursable)\b/.test(issueText)) return 'Fees & recovery';
+  if (stage.stage === 'receiving') return 'Quantity mismatch';
+  if (stage.stage === 'prep') return 'Packaging & compliance';
+  if (stage.stage === 'pack') return 'Packing & fulfillment';
+  if (stage.stage === 'returns') return 'Returns & disposition';
+  if (stage.stage === 'recovery') return 'Fees & recovery';
+  return 'Other operational';
+}
+
+function buildIssueBreakdown(workflows: WorkflowState[]) {
+  const totals = new Map<IssueCategory, { total: number; resolved: number }>();
+  for (const workflow of workflows) {
+    for (const stage of workflow.stage_results || []) {
+      const isIssue = stage.state === 'error' || stage.verdict === 'FAIL' ||
+        Boolean(stage.needs_human) || stage.verdict === 'UNCERTAIN';
+      if (!isIssue) continue;
+
+      const category = issueCategory(workflow, stage);
+      const tally = totals.get(category) || { total: 0, resolved: 0 };
+      tally.total += 1;
+      const explicitlyOverridden = (workflow.overrides || []).some((override) =>
+        override.supersedes?.record_id === stage.record_id && override.new_verdict === 'PASS'
+      );
+      const completedCleanly = workflow.status === 'COMPLETED' &&
+        !['EXCEPTION', 'CLAIM_RECOMMENDED', 'NEEDS_REVIEW', 'INCOMPLETE'].includes(
+          String(workflow.final_outcome?.outcome || '').toUpperCase()
+        ) &&
+        !(workflow.stage_results || []).some((item) =>
+          item.state === 'error' || item.verdict === 'FAIL' || item.needs_human || item.verdict === 'UNCERTAIN'
+        );
+      if (explicitlyOverridden || completedCleanly) tally.resolved += 1;
+      totals.set(category, tally);
+    }
+  }
+  return ISSUE_CATEGORIES
+    .map((category) => ({ ...category, ...(totals.get(category.label) || { total: 0, resolved: 0 }) }))
+    .filter((category) => category.total > 0)
+    .map((category) => ({
+      ...category,
+      resolutionRate: Math.round((category.resolved / category.total) * 100),
+      open: category.total - category.resolved,
+    }))
+    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
+}
+
+type LifecycleCounts = Record<LifecycleOutcome, number>;
+
+function LifecycleDonut({
+  counts,
+  layout = 'horizontal',
+}: {
+  counts: LifecycleCounts;
+  layout?: 'horizontal' | 'vertical';
+}) {
+  const items = [
+    { label: 'Completed', value: counts.completed, color: '#22C55E' },
+    { label: 'Exception', value: counts.exception, color: '#EF4444' },
+    { label: 'Human Review', value: counts.human_review, color: '#F59E0B' },
+    { label: 'In Progress', value: counts.in_progress, color: '#3B82F6' },
+    { label: 'Incomplete', value: counts.incomplete, color: '#94A3B8' },
+  ];
+
+  const total = items.reduce((sum, item) => sum + item.value, 0);
+  const radius = 66;
+  const stroke = 18;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+return (
+  <div
+    className={`flex flex-1 items-center justify-center gap-4 ${
+      layout === 'horizontal' ? 'flex-row' : 'flex-col'
+    }`}
+  >
+    {/* Donut on the left */}
+    <div className="relative h-[190px] w-[190px] shrink-0">
+      <svg
+        viewBox="0 0 180 180"
+        className="h-full w-full -rotate-90"
+        role="img"
+        aria-label={`Lifecycle outcomes for ${total} units`}
+      >
+        <circle
+          cx="90"
+          cy="90"
+          r={radius}
+          fill="none"
+          stroke="var(--bg-raised)"
+          strokeWidth={stroke}
+        />
+
+        {total > 0 &&
+          items.map((item) => {
+            const segment = (item.value / total) * circumference;
+            const currentOffset = offset;
+            offset += segment;
+
+            if (item.value === 0) return null;
+
+            return (
+              <circle
+                key={item.label}
+                cx="90"
+                cy="90"
+                r={radius}
+                fill="none"
+                stroke={item.color}
+                strokeWidth={stroke}
+                strokeDasharray={`${segment} ${circumference - segment}`}
+                strokeDashoffset={-currentOffset}
+                strokeLinecap="butt"
+              />
+            );
+          })}
+      </svg>
+
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <strong className="text-3xl font-bold text-[var(--text-primary)]">
+          {total}
+        </strong>
+        <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
+          Total units
+        </span>
+      </div>
+    </div>
+
+    {/* Legend on the right */}
+    <div className="flex min-w-0 flex-1 flex-col gap-3">
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="flex items-center justify-between gap-2"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: item.color }}
+            />
+            <span className="truncate text-xs text-[var(--text-secondary)]">
+              {item.label}
+            </span>
+          </div>
+
+          <strong className="text-xs text-[var(--text-primary)]">
+            {item.value}
+          </strong>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+}
 
 function VerdictBar({ pass, fail, uncertain, total }: { pass: number; fail: number; uncertain: number; total: number }) {
   if (total === 0) return <div className="h-1.5 rounded-full" style={{ background: '#1E2D45' }} />;
@@ -62,18 +291,19 @@ function VerdictBar({ pass, fail, uncertain, total }: { pass: number; fail: numb
   );
 }
 
-function DonutChart({ pass, fail, uncertain }: { pass: number; fail: number; uncertain: number }) {
+function DonutChart({ pass, fail, uncertain, size = 120 }: { pass: number; fail: number; uncertain: number; size?: number }) {
   const total = pass + fail + uncertain;
   if (total === 0) return (
-    <div className="flex items-center justify-center" style={{ width: 120, height: 120 }}>
+    <div className="flex items-center justify-center" style={{ width: size, height: size }}>
       <span style={{ fontSize: 11, color: '#475569' }}>No data</span>
     </div>
   );
 
-  const r = 40;
-  const cx = 60;
-  const cy = 60;
-  const circumference = 2 * Math.PI * r;
+  const radius = Math.max(26, size * 0.34);
+  const strokeWidth = Math.max(10, size * 0.12);
+  const cx = size / 2;
+  const cy = size / 2;
+  const circumference = 2 * Math.PI * radius;
 
   const segments = [
     { value: pass,      color: '#22C55E', label: 'PASS' },
@@ -94,16 +324,16 @@ function DonutChart({ pass, fail, uncertain }: { pass: number; fail: number; unc
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="relative" style={{ width: 120, height: 120 }}>
-        <svg width="120" height="120" viewBox="0 0 120 120">
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1E2D45" strokeWidth="14" />
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <circle cx={cx} cy={cy} r={radius} fill="none" stroke="#1E2D45" strokeWidth={strokeWidth} />
           {paths.map((p) => (
             <circle
               key={p.label}
-              cx={cx} cy={cy} r={r}
+              cx={cx} cy={cy} r={radius}
               fill="none"
               stroke={p.color}
-              strokeWidth="14"
+              strokeWidth={strokeWidth}
               strokeDasharray={p.dashArray}
               strokeDashoffset={0}
               transform={`rotate(${p.rotation} ${cx} ${cy})`}
@@ -112,8 +342,8 @@ function DonutChart({ pass, fail, uncertain }: { pass: number; fail: number; unc
           ))}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-heading font-black text-white" style={{ fontSize: 20 }}>{passRate}%</span>
-          <span style={{ fontSize: 9, color: '#475569', fontFamily: 'Poppins' }}>PASS RATE</span>
+          <span className="font-heading font-black text-white" style={{ fontSize: Math.max(16, size * 0.17) }}>{passRate}%</span>
+          <span style={{ fontSize: Math.max(8, size * 0.07), color: '#475569', fontFamily: 'Poppins' }}>PASS RATE</span>
         </div>
       </div>
       <div className="flex gap-3">
@@ -128,82 +358,10 @@ function DonutChart({ pass, fail, uncertain }: { pass: number; fail: number; unc
   );
 }
 
-function SemiGauge({ value, label, sublabel }: { value: number; label: string; sublabel: string }) {
-  const clampedVal = Math.max(0, Math.min(100, value));
-  const angle = (clampedVal / 100) * 180;
-  const r = 50;
-  const cx = 65;
-  const cy = 65;
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const toXY = (deg: number) => ({
-    x: cx + r * Math.cos(toRad(deg - 180)),
-    y: cy + r * Math.sin(toRad(deg - 180)),
-  });
-  const startPt = toXY(0);
-  const endPt = toXY(180);
-  const activePt = toXY(angle);
-  const largeArc = angle > 90 ? 1 : 0;
-  const color = clampedVal >= 90 ? '#22C55E' : clampedVal >= 70 ? '#F59E0B' : '#EF4444';
-
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <svg width="130" height="80" viewBox="0 0 130 80">
-        {/* Background arc */}
-        <path
-          d={`M ${startPt.x} ${startPt.y} A ${r} ${r} 0 0 1 ${endPt.x} ${endPt.y}`}
-          fill="none" stroke="#1E2D45" strokeWidth="12" strokeLinecap="round"
-        />
-        {/* Active arc */}
-        {clampedVal > 0 && (
-          <path
-            d={`M ${startPt.x} ${startPt.y} A ${r} ${r} 0 ${largeArc} 1 ${activePt.x} ${activePt.y}`}
-            fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
-          />
-        )}
-        {/* Center text */}
-        <text x={cx} y={58} textAnchor="middle" fill="white" fontSize="16" fontFamily="Manrope" fontWeight="800">
-          {clampedVal}%
-        </text>
-      </svg>
-      <div className="text-center">
-        <div className="font-poppins font-semibold text-white" style={{ fontSize: 12 }}>{label}</div>
-        <div style={{ fontSize: 10, color: '#475569', fontFamily: 'Poppins' }}>{sublabel}</div>
-      </div>
-    </div>
-  );
-}
-
-function MiniTrend({ values, color }: { values: number[]; color: string }) {
-  if (values.length < 2) return null;
-  const max = Math.max(...values) || 1;
-  const min = Math.min(...values);
-  const range = max - min || 1;
-  const w = 60;
-  const h = 24;
-  const pts = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * w;
-    const y = h - ((v - min) / range) * h;
-    return `${x},${y}`;
-  }).join(' ');
-
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-      <polyline
-        points={pts}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.8"
-      />
-    </svg>
-  );
-}
-
 export const CommandCenter: React.FC<CommandCenterProps> = ({
   orgId,
   workflows,
+  refreshToken,
   liveBackend,
   lastRefresh,
   isRefreshing,
@@ -215,28 +373,28 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   onRunWorkflow,
   onOpenNewUnitModal,
 }) => {
-  const [dateRange, setDateRange] = useState<DateRange>('30d');
+  const [dateRange, setDateRange] = useState<DateRange>('all');
   const [verdictFilter, setVerdictFilter] = useState<'ALL' | 'PASS' | 'FAIL' | 'UNCERTAIN'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [timeseries, setTimeseries] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
-  const [locations, setLocations] = useState<any>(null);
   const [dashLoading, setDashLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState('');
 
   const loadDashboard = useCallback(async () => {
     setDashLoading(true);
+    setDashboardError('');
     try {
-      const [s, ts, act, loc] = await Promise.all([
+      const [s, act] = await Promise.all([
         fetchDashboardSummary(orgId, dateRange),
-        fetchDashboardTimeseries(orgId, dateRange),
         fetchDashboardActivity(orgId, 30),
-        fetchDashboardLocations(orgId),
       ]);
       setSummary(s);
-      setTimeseries(ts);
       setActivity(Array.isArray(act) ? act : []);
-      setLocations(loc);
+    } catch (error) {
+      setSummary(null);
+      setActivity([]);
+      setDashboardError(error instanceof Error ? error.message : 'Dashboard data could not be loaded.');
     } finally {
       setDashLoading(false);
     }
@@ -244,7 +402,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
   useEffect(() => {
     void loadDashboard();
-  }, [loadDashboard]);
+  }, [loadDashboard, refreshToken]);
 
   // Compute real metrics from workflows
   const stats = useMemo(() => {
@@ -291,6 +449,23 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       pendingReviews, recoveryClaims, stageCounts,
     };
   }, [workflows]);
+
+  const lifecycleCounts = useMemo(() => {
+    const counts: Record<LifecycleOutcome, number> = {
+      completed: 0,
+      exception: 0,
+      human_review: 0,
+      in_progress: 0,
+      incomplete: 0,
+    };
+    workflows.forEach((workflow) => {
+      counts[lifecycleOutcome(workflow)] += 1;
+    });
+    return counts;
+  }, [workflows]);
+
+  const issueBreakdown = useMemo(() => buildIssueBreakdown(workflows), [workflows]);
+  const maxIssueCount = Math.max(1, ...issueBreakdown.map((item) => item.total));
 
   // Filtered workflows for table
   const filteredWorkflows = useMemo(() => {
@@ -423,7 +598,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             Command Center
           </h1>
           <p className="font-poppins text-[var(--text-muted)] mt-0.5" style={{ fontSize: 13 }}>
-            {kpis?.total_units ?? stats.total} registered units · range {dateRange}
+            {kpis?.total_units ?? stats.total} registered units · range {dateRange === 'all' ? 'all time' : dateRange}
           </p>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className={`badge ${liveBackend ? 'badge-pass' : 'badge-fail'}`}>
@@ -476,6 +651,16 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
       </div>
 
+      {dashboardError && (
+        <p
+          role="alert"
+          className="rounded-lg border px-3 py-2 text-sm"
+          style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+        >
+          Dashboard data unavailable: {dashboardError}
+        </p>
+      )}
+
       {/* ── KPI Cards Grid ── */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {kpiCards.map((kpi) => {
@@ -518,58 +703,82 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
       {/* ── Charts Row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Verdict Distribution Donut */}
-        <div className="card p-5 space-y-3">
+        <div className="card p-5 flex flex-col" style={{ minHeight: 350 }}>
           <div>
-            <p className="font-poppins font-semibold text-white" style={{ fontSize: 14 }}>Verdict Distribution</p>
-            <p className="font-poppins text-slate-500" style={{ fontSize: 11 }}>
+            <p
+              className="font-poppins font-semibold text-[var(--text-primary)]"
+              style={{ fontSize: 14 }}
+            >
+              Verdict Distribution
+            </p>
+            <p
+              className="font-poppins text-[var(--text-muted)]"
+              style={{ fontSize: 11 }}
+            >
               All completed stage executions — {stats.totalCompleted} total
             </p>
           </div>
-          <div className="flex justify-center pt-2">
-            <DonutChart
-              pass={summary?.verdict_distribution?.counts?.PASS ?? stats.globalPass}
-              fail={summary?.verdict_distribution?.counts?.FAIL ?? stats.globalFail}
-              uncertain={summary?.verdict_distribution?.counts?.UNCERTAIN ?? stats.globalUncertain}
-            />
+
+          <div className="flex-1 flex items-center justify-center pt-3 pb-2">
+            <div
+              className="w-full flex items-center justify-center"
+              style={{ minHeight: 280 }}
+            >
+              <DonutChart
+                pass={summary?.verdict_distribution?.counts?.PASS ?? stats.globalPass}
+                fail={summary?.verdict_distribution?.counts?.FAIL ?? stats.globalFail}
+                uncertain={summary?.verdict_distribution?.counts?.UNCERTAIN ?? stats.globalUncertain}
+                size={220}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Operational Health Gauge */}
-        <div className="card p-5 space-y-3 flex flex-col items-center justify-center">
+        <div className="card p-5 space-y-3">
           <div className="w-full">
-            <p className="font-poppins font-semibold text-white" style={{ fontSize: 14 }}>Operational Health</p>
-            <p className="font-poppins text-slate-500" style={{ fontSize: 11 }}>
-              PASS rate over selected period
+            <p className="font-poppins font-semibold text-[var(--text-primary)]" style={{ fontSize: 14 }}>Operational Health by Agent</p>
+            <p className="font-poppins text-[var(--text-muted)]" style={{ fontSize: 11 }}>
+              Completed outcomes split by verdict
             </p>
           </div>
-          <SemiGauge
-            value={summary?.operational_health?.percentage ?? stats.passRate ?? 0}
-            label="Execution success"
-            sublabel={
-              summary?.operational_health
-                ? `${summary.operational_health.numerator} PASS / ${summary.operational_health.denominator} evidence`
-                : `${stats.globalPass} passed / ${stats.totalCompleted} executed`
-            }
-          />
-          <div className="w-full grid grid-cols-2 gap-2 mt-2">
-            <div className="rounded-lg p-2.5 text-center" style={{ background: '#0D1117', border: '1px solid #1E2D45' }}>
-              <div className="font-heading font-bold text-green-400" style={{ fontSize: 16 }}>{stats.globalPass}</div>
-              <div className="font-poppins text-slate-500" style={{ fontSize: 10 }}>Passed</div>
-            </div>
-            <div className="rounded-lg p-2.5 text-center" style={{ background: '#0D1117', border: '1px solid #1E2D45' }}>
-              <div className="font-heading font-bold text-red-400" style={{ fontSize: 16 }}>{stats.globalFail}</div>
-              <div className="font-poppins text-slate-500" style={{ fontSize: 10 }}>Failed</div>
-            </div>
+          <div className="space-y-3 pt-1">
+            {AGENTS.map((agent) => {
+              const outcomes = stats.stageCounts[agent.id];
+              const total = outcomes.total;
+              const passPct = total ? (outcomes.pass / total) * 100 : 0;
+              const failPct = total ? (outcomes.fail / total) * 100 : 0;
+              const uncertainPct = total ? (outcomes.uncertain / total) * 100 : 0;
+              return (
+                <div key={agent.id} className="space-y-1">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-poppins font-medium text-[var(--text-secondary)]">{agent.label}</span>
+                    <span className="font-mono text-[var(--text-muted)]">{total} runs</span>
+                  </div>
+                  <div
+                    className="h-2.5 overflow-hidden rounded-full flex"
+                    style={{ background: 'var(--bg-raised)' }}
+                    aria-label={`${agent.label}: ${outcomes.pass} pass, ${outcomes.fail} fail, ${outcomes.uncertain} uncertain`}
+                    role="img"
+                  >
+                    <span style={{ width: `${passPct}%`, background: '#22C55E' }} />
+                    <span style={{ width: `${failPct}%`, background: '#EF4444' }} />
+                    <span style={{ width: `${uncertainPct}%`, background: '#F59E0B' }} />
+                  </div>
+                  <div className="flex gap-3 text-[10px] font-poppins text-[var(--text-muted)]">
+                    <span><span className="text-green-500">●</span> {outcomes.pass} pass</span>
+                    <span><span className="text-red-500">●</span> {outcomes.fail} fail</span>
+                    <span><span className="text-amber-500">●</span> {outcomes.uncertain} review</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
 
-        {/* Workflow Funnel */}
+        </div>
         <div className="card p-5 space-y-3">
           <div>
-            <p className="font-poppins font-semibold text-white" style={{ fontSize: 14 }}>Stage Funnel</p>
-            <p className="font-poppins text-slate-500" style={{ fontSize: 11 }}>
+            <p className="font-poppins font-semibold text-[var(--text-primary)]" style={{ fontSize: 14 }}>Stage Funnel</p>
+            <p className="font-poppins text-[var(--text-muted)]" style={{ fontSize: 11 }}>
               Units that reached each stage
             </p>
           </div>
@@ -584,7 +793,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Icon size={12} style={{ color: stage.color }} />
-                      <span className="font-poppins font-medium text-slate-300" style={{ fontSize: 12 }}>
+                      <span className="font-poppins font-medium text-[var(--text-secondary)]" style={{ fontSize: 12 }}>
                         {stage.num} {stage.label}
                       </span>
                     </div>
@@ -592,7 +801,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                       {funnelCount}
                     </span>
                   </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#1E2D45' }}>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-raised)' }}>
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${pct}%`, background: stage.color, opacity: 0.8 }}
@@ -611,7 +820,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           <div>
             <p className="font-poppins font-semibold text-white" style={{ fontSize: 14 }}>Agent Performance</p>
             <p className="font-poppins text-slate-500" style={{ fontSize: 11 }}>
-              PASS / FAIL / UNCERTAIN per operational agent
+              Saved PASS / FAIL / UNCERTAIN evidence in the selected range
             </p>
           </div>
         </div>
@@ -619,7 +828,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {AGENTS.map((agent) => {
             const apiPerf = summary?.agent_performance?.[agent.id];
-            const counts = apiPerf
+            const counts = apiPerf?.completed_in_period
               ? { pass: apiPerf.pass, fail: apiPerf.fail, uncertain: apiPerf.uncertain, total: apiPerf.completed_in_period }
               : stats.stageCounts[agent.id];
             const Icon = agent.icon;
@@ -663,66 +872,122 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="card p-5 lg:col-span-2 chart-area" style={{ minHeight: 260 }}>
-          <p className="font-poppins font-semibold text-[var(--text-primary)] mb-1" style={{ fontSize: 14 }}>Operations trend</p>
-          <p className="font-poppins text-[var(--text-muted)] mb-3" style={{ fontSize: 11 }}>
-            Registered units, completed workflows, and evidence executions
-          </p>
-          {timeseries?.series?.length ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={timeseries.series}>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
-                <XAxis dataKey="period" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="registered_units" name="Registered" stroke="#3B82F6" dot={false} strokeWidth={2} />
-                <Line type="monotone" dataKey="completed_workflows" name="Completed WF" stroke="#22C55E" dot={false} strokeWidth={2} />
-                <Line type="monotone" dataKey="failed_or_blocked" name="Blocked" stroke="#EF4444" dot={false} strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-xs text-[var(--text-muted)] font-poppins">No time-series data for this range.</p>
-          )}
-        </div>
-        <div className="card p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <MapPin size={14} className="text-blue-500" />
-            <p className="font-poppins font-semibold text-[var(--text-primary)]" style={{ fontSize: 14 }}>Route summary</p>
-          </div>
-          <p className="text-[11px] text-[var(--text-muted)]">{locations?.note || 'No geographic coordinates stored.'}</p>
-          {(locations?.summary || []).map((row: any) => (
-            <div key={row.label} className="flex justify-between text-sm font-poppins">
-              <span>{row.label}</span>
-              <strong>{row.count}</strong>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      <div className="card p-5 space-y-3">
-        <p className="font-poppins font-semibold text-[var(--text-primary)]" style={{ fontSize: 14 }}>Recent activity</p>
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {activity.length === 0 ? (
-            <p className="text-xs text-[var(--text-muted)]">No persisted events yet.</p>
-          ) : activity.map((ev, idx) => (
-            <button
-              key={`${ev.type}-${ev.timestamp}-${idx}`}
-              type="button"
-              className="w-full text-left rounded-lg p-2.5 flex justify-between gap-2"
-              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-              onClick={() => ev.unit_id && onSelectUnit(ev.unit_id)}
-            >
-              <div>
-                <div className="text-xs font-semibold text-[var(--text-primary)]">{ev.type.replace(/_/g, ' ')}</div>
-                <div className="text-[11px] text-[var(--text-muted)]">{ev.unit_id} · {ev.stage || '—'} · {ev.context?.slice?.(0, 60)}</div>
-              </div>
-              <div className="text-[10px] text-[var(--text-muted)] shrink-0">{String(ev.timestamp || '').slice(0, 16)}</div>
-            </button>
-          ))}
-        </div>
+<div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-2">
+
+  {/* Issue Category Breakdown */}
+  <section
+    className="card flex flex-col gap-4 p-5"
+    aria-labelledby="issue-breakdown-heading"
+  >
+    <div>
+      <p
+        id="issue-breakdown-heading"
+        className="font-poppins font-semibold text-[var(--text-primary)]"
+        style={{ fontSize: 14 }}
+      >
+        Issue Category Breakdown
+      </p>
+      <p
+        className="font-poppins text-[var(--text-muted)]"
+        style={{ fontSize: 11 }}
+      >
+        Current workflow issues by category, with operator-resolved share
+      </p>
+    </div>
+
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[var(--text-muted)]">
+      <span><span className="mr-1 text-green-500">●</span>Resolved</span>
+      <span><span className="mr-1 text-blue-500">●</span>Open</span>
+      <span className="ml-auto">Resolution rate</span>
+    </div>
+
+    {issueBreakdown.length === 0 ? (
+      <div className="flex min-h-28 items-center justify-center text-center text-xs text-[var(--text-muted)]">
+        No active issues in the current unit set.
       </div>
+    ) : (
+      <div className="space-y-4">
+        {issueBreakdown.map((issue) => (
+          <div
+            key={issue.label}
+            className="grid grid-cols-[minmax(100px,1fr)_minmax(60px,1.3fr)_76px] items-center gap-3"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ background: issue.color }}
+              />
+              <span
+                className="truncate text-xs text-[var(--text-secondary)]"
+                title={issue.label}
+              >
+                {issue.label}
+              </span>
+            </div>
+
+            <div
+              className="flex h-3 min-w-0 overflow-hidden rounded-full"
+              style={{ background: 'var(--bg-raised)' }}
+              role="img"
+              aria-label={`${issue.label}: ${issue.resolved} resolved, ${issue.open} open`}
+            >
+              <span
+                className="h-full bg-green-500 transition-all"
+                style={{
+                  width: `${(issue.resolved / maxIssueCount) * 100}%`,
+                }}
+              />
+              <span
+                className="h-full transition-all"
+                style={{
+                  width: `${(issue.open / maxIssueCount) * 100}%`,
+                  background: issue.color,
+                }}
+              />
+            </div>
+
+            <span className="text-right font-mono text-xs text-[var(--text-primary)]">
+              {issue.resolutionRate}%
+              <span className="text-[var(--text-muted)]">
+                {' '}({issue.resolved}/{issue.total})
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+    )}
+
+    <p className="text-[10px] leading-relaxed text-[var(--text-muted)]">
+      Resolved means an issue has an explicit PASS operator override; counts
+      reflect the latest saved stage state.
+    </p>
+  </section>
+
+  {/* Unit Lifecycle Outcome Breakdown */}
+  <section
+    className="card flex flex-col gap-3 p-5"
+    aria-labelledby="lifecycle-breakdown-heading"
+  >
+    <div>
+      <p
+        id="lifecycle-breakdown-heading"
+        className="font-poppins font-semibold text-[var(--text-primary)]"
+        style={{ fontSize: 14 }}
+      >
+        Unit Lifecycle Outcome Breakdown
+      </p>
+      <p
+        className="font-poppins text-[var(--text-muted)]"
+        style={{ fontSize: 11 }}
+      >
+        Each unit is grouped by its current overall lifecycle outcome
+      </p>
+    </div>
+
+    <LifecycleDonut counts={lifecycleCounts} layout="horizontal" />
+  </section>
+</div>
 
       {/* ── Live Unit Table ── */}
       <div className="card overflow-hidden">
@@ -800,7 +1065,9 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 filteredWorkflows.map((wf) => {
                   const isHalted = wf.status === 'HALTED' || wf.status === 'DEGRADED';
                   const isCompleted = wf.status === 'COMPLETED';
-                  const route = wf.stage_results.find((s) => s.stage === 'prep')?.state !== 'skipped' ? 'FBA' : 'MFN';
+                  const inferredRoute = wf.stage_results.find((s) => s.stage === 'prep')?.state !== 'skipped' ? 'fba' : 'mfn';
+                  const route = String(wf.context?.route || inferredRoute).toUpperCase();
+                  const currentStage = AGENTS.find((stage) => stage.id === wf.current_stage);
                   const completedStages = wf.stage_results.filter((s) => s.state === 'completed').length;
 
                   return (
@@ -826,7 +1093,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                         </span>
                       </td>
                       <td className="text-slate-300" style={{ fontSize: 12 }}>
-                        {wf.current_stage || '01 · Receiving'}
+                        {currentStage ? `${currentStage.num} · ${currentStage.label}` : '—'}
                       </td>
                       <td>
                         <span className={`badge ${isHalted ? 'badge-fail' : isCompleted ? 'badge-pass' : 'badge-blue'}`}>

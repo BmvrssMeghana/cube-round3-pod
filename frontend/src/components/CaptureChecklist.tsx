@@ -74,15 +74,33 @@ export const CaptureChecklist: React.FC<CaptureChecklistProps> = ({
                 )}
               </div>
 
-              <input
-                type="file"
-                accept={accept}
-                className="block w-full text-[11px] font-poppins text-[var(--text-secondary)] file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-brand-yellow file:text-black hover:file:bg-white cursor-pointer"
-                onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                  void attach(shot, event.currentTarget.files?.[0]);
-                  event.currentTarget.value = '';
-                }}
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept={accept}
+                  className="block w-full text-[11px] font-poppins text-[var(--text-secondary)] file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                    void attach(shot, event.currentTarget.files?.[0]);
+                    event.currentTarget.value = '';
+                  }}
+                />
+                {!captured && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dummyBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+                      onChange([...value.filter((item) => item.shot !== shot), {
+                        shot,
+                        filename: `${shot.toLowerCase().replace(/\s+/g, '_')}_sample.png`,
+                        content_base64: dummyBase64,
+                      }]);
+                    }}
+                    className="shrink-0 px-2 py-1 text-[10px] font-bold font-poppins rounded-md bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-colors"
+                  >
+                    + Sample Photo
+                  </button>
+                )}
+              </div>
 
               {captured && (
                 <div className="flex items-center justify-between pt-1">

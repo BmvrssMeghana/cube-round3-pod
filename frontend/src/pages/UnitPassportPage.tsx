@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { UnitSearchSelector } from '../components/UnitSearchSelector';
 import type { WorkflowState, EvidenceRecord } from '../types';
 import { UnitPassportCard } from '../components/UnitPassportCard';
 import { HumanReviewModal } from '../components/HumanReviewModal';
@@ -7,12 +8,14 @@ interface UnitPassportPageProps {
   unitId: string;
   workflows: WorkflowState[];
   evidence: Record<string, EvidenceRecord>;
+  onApplyOverride: (unitId: string, recordId: string, verdict: string, actor: string, reason: string) => Promise<void>;
 }
 
 export const UnitPassportPage: React.FC<UnitPassportPageProps> = ({
   unitId,
   workflows,
   evidence,
+  onApplyOverride,
 }) => {
   const [selectedUnitId, setSelectedUnitId] = useState<string>(unitId);
   const [overrideRecordId, setOverrideRecordId] = useState<string | null>(null);
@@ -37,18 +40,13 @@ export const UnitPassportPage: React.FC<UnitPassportPageProps> = ({
 
         {/* Unit Selector */}
         <div className="flex items-center gap-2 font-poppins text-xs">
-          <label className="text-brand-muted uppercase font-bold">Select Unit:</label>
-          <select
-            value={currentWorkflow?.subject_id || ''}
-            onChange={(e) => setSelectedUnitId(e.target.value)}
-            className="bg-brand-surface border border-brand-border text-white rounded-full px-4 py-1.5 font-poppins text-xs focus:outline-none focus:border-brand-yellow cursor-pointer"
-          >
-            {workflows.map((w) => (
-              <option key={w.subject_id} value={w.subject_id} className="bg-brand-surface">
-                {w.subject_id} ({w.status})
-              </option>
-            ))}
-          </select>
+          <label className="text-slate-400 font-semibold uppercase">Search Unit:</label>
+          <UnitSearchSelector
+            workflows={workflows}
+            selectedUnitId={selectedUnitId || currentWorkflow?.subject_id || ''}
+            onSelectUnit={(uid) => setSelectedUnitId(uid)}
+            width={240}
+          />
         </div>
       </div>
 
@@ -69,8 +67,14 @@ export const UnitPassportPage: React.FC<UnitPassportPageProps> = ({
         <HumanReviewModal
           unitId={currentWorkflow.subject_id}
           recordId={overrideRecordId}
+          mode="override"
+          workflow={currentWorkflow}
+          evidence={evidence}
           onClose={() => setOverrideRecordId(null)}
-          onSubmitOverride={() => setOverrideRecordId(null)}
+          onSubmitOverride={async (recordId, verdict, actor, reason) => {
+            await onApplyOverride(currentWorkflow.subject_id, recordId, verdict, actor, reason);
+            setOverrideRecordId(null);
+          }}
         />
       )}
     </div>

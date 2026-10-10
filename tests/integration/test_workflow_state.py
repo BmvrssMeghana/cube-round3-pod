@@ -225,7 +225,7 @@ def test_rerunning_a_case_does_not_duplicate_or_change_evidence():
     a = run_workflow(CASE, STANDARD, store, clients)
     b = run_workflow(CASE, STANDARD, store, clients)
     assert a["evidence_references"] == b["evidence_references"]
-    assert sum(c.calls for c in clients.values()) == 4, "completed stages are not re-run"
+    assert sum(c.calls for c in clients.values()) == 5, "completed stages are not re-run"
 
 
 # ------------------------------------------------------------ routing
@@ -233,9 +233,9 @@ def states(wf):
     return {s["stage"]: s["state"] for s in wf["stage_results"]}
 
 
-def test_fba_goes_through_prep_not_pack(cases):
+def test_fba_goes_through_prep_then_pack(cases):
     s = states(run_workflow(next(c for c in cases if c["route"] == "fba"), STANDARD))
-    assert s["prep"] != "skipped" and s["pack"] == "skipped"
+    assert s["prep"] != "skipped" and s["pack"] != "skipped"
 
 
 def test_mfn_goes_through_pack_not_prep(cases):
@@ -251,6 +251,12 @@ def test_returns_only_when_a_return_happened(cases):
 def test_unrouted_subject_skips_prep_and_pack_but_completes_the_rest(cases):
     s = states(run_workflow(next(c for c in cases if c["route"] == "unknown"), STANDARD))
     assert s["prep"] == s["pack"] == "skipped" and s["receiving"] == s["recovery"] == "completed"
+
+
+def test_fba_stage_order_runs_prep_before_pack(cases):
+    workflow = run_workflow(next(c for c in cases if c["route"] == "fba"), STANDARD, MemoryStore(), fakes())
+    completed = [stage["stage"] for stage in workflow["stage_results"] if stage["state"] == "completed"]
+    assert completed.index("receiving") < completed.index("prep") < completed.index("pack")
 
 
 def test_specialist_flow_has_no_prep_and_recovery_stays_silent_on_inbound_fees(cases):

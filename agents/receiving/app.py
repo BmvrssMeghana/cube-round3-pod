@@ -22,7 +22,12 @@ def handle(request: dict) -> dict:
 
     input_records = captures(request, r)
     refs = [p["ref"] for p in input_records] or ["img_receiving_01.jpg"]
-    flags = [f for f in r.get("quality_flags", "").split(";") if f]
+    raw_flags = r.get("quality_flags") or []
+    if isinstance(raw_flags, str):
+        raw_flags = raw_flags.split(";")
+    if not isinstance(raw_flags, list):
+        raise TypeError("quality_flags must be a string or list of strings")
+    flags = [flag.strip() for flag in raw_flags if isinstance(flag, str) and flag.strip()]
     qo, qr = int(r.get("qty_ordered", 1)), int(r.get("qty_received", 1))
     co, cr = int(r.get("cartons_ordered", 1)), int(r.get("cartons_received", 1))
     units_ordered, units_counted = r.get("units_per_carton_ordered"), r.get("units_per_carton_counted")

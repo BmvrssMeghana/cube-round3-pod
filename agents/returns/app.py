@@ -17,6 +17,14 @@ AGENT_ID = "returns-agent@v1.0"
 MODEL_INFO = {"name": "returns-condition-rules-v1", "version": "1.0", "provider": "cube_rules", "calls": 0, "cost_usd": 0}
 
 
+def _parts(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(";") if part.strip()]
+    if isinstance(value, (list, tuple, set)):
+        return [str(part).strip() for part in value if str(part).strip()]
+    return []
+
+
 def handle(request: dict) -> dict:
     s = request["subject"]
     subject_id = s.get("subject_id") or s.get("unit_id")
@@ -24,13 +32,13 @@ def handle(request: dict) -> dict:
 
     input_records = captures(request, r)
     refs = [p["ref"] for p in input_records] or ["img_return_01.jpg"]
-    raw_missing = r.get("parts_missing", "")
-    missing = [part for part in raw_missing.split(";") if part] if isinstance(raw_missing, str) else list(raw_missing or [])
+    missing = _parts(r.get("parts_missing"))
+    parts_list = _parts(r.get("parts_list", "unit"))
     returned_sku = r.get("returned_sku", r.get("ordered_sku", "SKU-001"))
     checks = [
         check("identity_match", verdict_from(r.get("identity_match", "yes"), {"yes"}, {"no"}), None,
               expected=r.get("ordered_sku"), observed=returned_sku, evidence_refs=refs, uncertain_reason="poor_image"),
-        check("completeness", "FAIL" if missing else "PASS", None, expected=r.get("parts_list", "").split(";"),
+        check("completeness", "FAIL" if missing else "PASS", None, expected=parts_list,
               observed={"missing": missing}, evidence_refs=refs),
     ]
     receiving = previous(request, "receiving")

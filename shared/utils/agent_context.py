@@ -21,7 +21,7 @@ def case_from_request(request: dict) -> dict | None:
 
 
 def _apply_live_inputs(stage: str, row: dict[str, Any], request: dict) -> dict[str, Any]:
-    """Overlay UI / inspect payload onto the baseline row (sample CSV or DB profile)."""
+    """Overlay UI / inspect payload onto the database-backed baseline row."""
     s = request.get("subject") or {}
     user = (request.get("context") or {}).get("user_inputs") or {}
     merged = {**user, **{k: v for k, v in s.items() if k not in ("org_id", "subject_id", "unit_id", "route") and v is not None}}
@@ -82,7 +82,7 @@ def _apply_live_inputs(stage: str, row: dict[str, Any], request: dict) -> dict[s
 
 
 def resolve_row(stage: str, request: dict) -> dict[str, Any]:
-    """Return a stage-specific row dict for rule engines. Tests use sample CSV when USE_SAMPLE_DATA=1."""
+    """Return the stage-specific row from the case or database profile."""
     s = request["subject"]
     subject_id = s.get("subject_id") or s.get("unit_id")
     org_id = s.get("org_id", "org_demo_alpha")
@@ -96,7 +96,9 @@ def resolve_row(stage: str, request: dict) -> dict[str, Any]:
 
     case = case_from_request(request)
     if case is not None:
-        return _apply_live_inputs(stage, _row_from_case(stage, case, s), request)
+        stage_record = (case.get("stage_records") or {}).get(stage, {})
+        stage_case = {**case, **stage_record}
+        return _apply_live_inputs(stage, _row_from_case(stage, stage_case, s), request)
 
     from orchestration.db import get_unit_profile
 
@@ -258,7 +260,8 @@ def _row_from_case(stage: str, case: dict, subject: dict) -> dict[str, Any]:
 
 def _row_from_profile(stage: str, profile: dict, subject: dict) -> dict[str, Any]:
     attrs = profile.get("attributes") or {}
-    merged = {**attrs, **{k: v for k, v in subject.items() if v is not None}}
+    stage_record = (attrs.get("stage_records") or {}).get(stage, {})
+    merged = {**attrs, **stage_record, **{k: v for k, v in subject.items() if v is not None}}
     case = {
         "org_id": profile["org_id"],
         "unit_id": profile["unit_id"],

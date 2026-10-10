@@ -5,7 +5,7 @@
   "module": "agents.returns.app",
   "url": "http://localhost:8104",
   "version": "1.0.0",
-  "mode": "real",
+  "mode": "inproc",
   "implementation": "real-engine",
   "description": "Returns Manager AI Agent evaluating returned item SKU identity, parts completeness, Amazon condition grading, and disposition rules."
 }

@@ -40,13 +40,15 @@ export const UnitPassportCard: React.FC<UnitPassportCardProps> = ({ workflow, ev
 
       {/* Continuous Evidence Trail */}
       <div className="space-y-4 pt-2">
-        <h4 className="font-syne font-extrabold text-sm text-brand-yellow uppercase tracking-wider">
+        <h4 className="font-syne font-extrabold text-sm text-[var(--accent-strong)] uppercase tracking-wider">
           Continuous Evidence Trail ({workflow.evidence_references.length} Stored Records)
         </h4>
 
         {workflow.evidence_references.map((ref) => {
           const ev = evidence[ref];
           if (!ev) return null;
+          const checks = ev.checks || [];
+          const upstreamRefs = ev.upstream_refs || [];
 
           return (
             <div key={ref} className="p-5 rounded-xl bg-brand-surface border border-brand-border space-y-3">
@@ -56,7 +58,7 @@ export const UnitPassportCard: React.FC<UnitPassportCardProps> = ({ workflow, ev
                     {ev.stage}
                   </span>
                   <span className="text-brand-muted">Record: <code className="text-slate-200">{ev.record_id}</code></span>
-                  <span className="text-neutral-500">Captured: {ev.captured_at}</span>
+                  <span className="text-neutral-500">Captured: {ev.captured_at || ev.produced_at || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge verdict={ev.decision.verdict} />
@@ -77,13 +79,13 @@ export const UnitPassportCard: React.FC<UnitPassportCardProps> = ({ workflow, ev
               </div>
 
               {/* Granular Checks */}
-              {ev.checks.length > 0 && (
+              {checks.length > 0 && (
                 <div className="p-3 rounded-lg bg-black/40 border border-brand-border/60 space-y-2">
                   <div className="font-poppins text-[10px] uppercase font-bold text-brand-muted tracking-wider">
-                    AI Inspection Checks ({ev.checks.length})
+                    AI Inspection Checks ({checks.length})
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {ev.checks.map((c, idx) => (
+                    {checks.map((c, idx) => (
                       <div
                         key={idx}
                         className={`p-2.5 rounded border-l-4 bg-brand-card/60 text-xs font-poppins ${
@@ -101,9 +103,9 @@ export const UnitPassportCard: React.FC<UnitPassportCardProps> = ({ workflow, ev
               )}
 
               {/* Upstream Evidence References */}
-              {ev.upstream_refs.length > 0 && (
+              {upstreamRefs.length > 0 && (
                 <div className="font-poppins text-[10px] text-brand-muted pt-1">
-                  🔗 Upstream Evidence References: {ev.upstream_refs.join(', ')}
+                  🔗 Upstream Evidence References: {upstreamRefs.join(', ')}
                 </div>
               )}
             </div>

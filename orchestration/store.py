@@ -10,6 +10,8 @@ import json
 import os
 from pathlib import Path
 
+from orchestration import db
+
 
 class EvidenceConflict(Exception):
     pass
@@ -79,3 +81,76 @@ class FileStore(MemoryStore):
             raise EvidenceConflict(f"{record['record_id']} already exists with different content; evidence is immutable")
         if not existing:
             (self.root / "evidence" / f"{record['record_id']}.json").write_text(json.dumps(record, indent=2))
+
+
+class DatabaseStore:
+    """Persist workflow state and evidence in the configured SQL database."""
+
+    def load_workflow(self, workflow_id: str) -> dict | None:
+        conn = db.get_connection()
+        is_pg = db.is_postgres_connection(conn)
+        try:
+            with conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT workflow_data FROM workflows WHERE workflow_id = %s"
+                    if is_pg
+                    else "SELECT workflow_data FROM workflows WHERE workflow_id = ?",
+                    (workflow_id,),
+                )
+                row = cursor.fetchone()
+            if not row or row[0] is None:
+                return None
+            return _decode_json(row[0])
+        finally:
+            conn.close()
+
+    def save_workflow(self, wf: dict) -> None:
+        context = wf.get("context") or {}
+        db.save_workflow_db(
+            workflow_id=wf["workflow_id"],
+            subject_id=wf["subject_id"],
+            route=str(context.get("route") or "unknown").upper(),
+            current_stage=wf.get("current_stage") or "receiving",
+            status=wf.get("status", "PENDING"),
+            final_outcome=json.dumps(wf.get("final_outcome")) if wf.get("final_outcome") is not None else None,
+            org_id=wf["org_id"],
+            workflow_data=wf,
+        )
+
+    def list_workflows(self, org_id: str | None = None) -> list[dict]:
+        conn = db.get_connection()
+        is_pg = db.is_postgres_connection(conn)
+        try:
+            with conn:
+                cursor = conn.cursor()
+                if org_id is None:
+                    cursor.execute("SELECT workflow_data FROM workflows ORDER BY updated_at DESC")
+                else:
+                    cursor.execute(
+                        "SELECT workflow_data FROM workflows WHERE org_id = %s ORDER BY updated_at DESC"
+                        if is_pg
+                        else "SELECT workflow_data FROM workflows WHERE org_id = ? ORDER BY updated_at DESC",
+                        (org_id,),
+                    )
+                rows = cursor.fetchall()
+            return [_decode_json(row[0]) for row in rows if row[0] is not None]
+        finally:
+            conn.close()
+
+    def get_evidence(self, record_id: str) -> dict | None:
+        return db.get_evidence_record(record_id)
+
+    def put_evidence(self, record: dict) -> None:
+        existing = self.get_evidence(record["record_id"])
+        if existing and existing.get("content_hash") != record.get("content_hash"):
+            raise EvidenceConflict(
+                f"{record['record_id']} already exists with different content; evidence is immutable"
+            )
+        db.save_evidence_db(record)
+
+
+def _decode_json(value):
+    if isinstance(value, str):
+        return json.loads(value)
+    return value
