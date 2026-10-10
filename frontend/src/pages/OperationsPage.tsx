@@ -106,25 +106,12 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
         </div>
       </div>
 
-      {(stageSkipped || missingPrerequisites.length > 0) && (
-        <div className="space-y-2">
-          {stageSkipped && (
-            <div className="rounded-lg p-3 flex items-start gap-2" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
-              <Info size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
-              <p className="font-poppins text-blue-700 dark:text-blue-300" style={{ fontSize: 12 }}>
-                {activeStage} is not enabled for this unit&apos;s route
-                {stageRes?.skipped_reason ? ` (${stageRes.skipped_reason})` : ''}.
-              </p>
-            </div>
-          )}
-          {missingPrerequisites.length > 0 && (
-            <div className="rounded-lg p-3 flex items-start gap-2" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
-              <Info size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="font-poppins text-amber-800 dark:text-amber-300" style={{ fontSize: 12 }}>
-                Complete upstream evidence first: <strong>{missingPrerequisites.join(', ')}</strong>.
-              </p>
-            </div>
-          )}
+      {missingPrerequisites.length > 0 && (
+        <div className="rounded-lg p-3 flex items-start gap-2" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}>
+          <Info size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+          <p className="font-poppins text-blue-700 dark:text-blue-300" style={{ fontSize: 12 }}>
+            Demo Mode: All 5 operational stages are enabled. Upstream context: <strong>{missingPrerequisites.join(', ')}</strong> (will use default baseline if not yet executed).
+          </p>
         </div>
       )}
 
@@ -135,8 +122,8 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
         onOpenUnit={onOpenPassport}
         onRunInspection={() => setActiveModal(activeStage)}
         refreshKey={refreshToken}
-        runDisabled={stageSkipped || missingPrerequisites.length > 0}
-        runDisabledReason={stageSkipped ? stageRes?.skipped_reason || 'This stage is not applicable to this unit.' : `Complete upstream stages first: ${missingPrerequisites.join(', ')}.`}
+        runDisabled={false}
+        runDisabledReason={undefined}
         headerExtra={unitSelector}
       />
 

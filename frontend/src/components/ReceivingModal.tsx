@@ -273,6 +273,91 @@ export const ReceivingModal: React.FC<ReceivingModalProps> = ({ unitId, onClose,
 
             <p className="text-xs text-brand-muted font-poppins">{result.evidence?.decision?.reason}</p>
 
+            {result.evidence?.payload?.intake_risk && (
+              <div className="p-3.5 rounded-xl bg-brand-card border border-amber-500/40 space-y-2 font-poppins">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                    Priority 6 · Evidence Completeness & Intake Risk Score
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    {result.evidence.payload.intake_risk.risk_level} ({result.evidence.payload.intake_risk.risk_score_pct}%)
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-[var(--text-secondary)]">
+                  <div>Completeness Grade: <strong className="text-[var(--text-primary)]">{result.evidence.payload.intake_risk.completeness_grade} ({result.evidence.payload.intake_risk.completeness_pct}%)</strong></div>
+                  <div>Recommended Routing: <strong className="text-emerald-400">{result.evidence.payload.intake_risk.recommended_routing}</strong></div>
+                </div>
+                {result.evidence.payload.intake_risk.risk_factors?.length > 0 && (
+                  <ul className="text-[10px] list-disc list-inside text-brand-muted space-y-0.5 pt-1">
+                    {result.evidence.payload.intake_risk.risk_factors.map((rf: string, idx: number) => (
+                      <li key={idx}>{rf}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {result.evidence?.payload?.reconciliation_matrix && (
+              <div className="space-y-2 pt-1">
+                <span className="font-poppins text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">
+                  Priority 1 · Expected vs. Observed Reconciliation Matrix
+                </span>
+                <div className="overflow-x-auto rounded-xl border border-brand-border bg-brand-card">
+                  <table className="w-full text-[11px] font-poppins text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-brand-border bg-brand-surface text-brand-muted uppercase text-[10px]">
+                        <th className="p-2">Attribute</th>
+                        <th className="p-2">PO Expected</th>
+                        <th className="p-2">Dock Observed</th>
+                        <th className="p-2">Variance</th>
+                        <th className="p-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-brand-border text-[var(--text-primary)]">
+                      {result.evidence.payload.reconciliation_matrix.map((row: any, i: number) => (
+                        <tr key={i} className="hover:bg-brand-surface/50">
+                          <td className="p-2 font-medium">{row.attribute}</td>
+                          <td className="p-2 text-brand-muted">{row.expected}</td>
+                          <td className="p-2 text-[var(--text-primary)]">{row.observed}</td>
+                          <td className="p-2 text-brand-muted">{row.variance}</td>
+                          <td className="p-2">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              row.status === 'MATCH' || row.status === 'INTACT'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'bg-red-500/20 text-red-400'
+                            }`}>
+                              {row.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {result.evidence?.payload?.specialist_executions?.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <span className="font-poppins text-[10px] uppercase font-bold text-blue-400 tracking-wider block">
+                  Specialist Workstreams Orchestration ({result.evidence.payload.specialist_executions.length} Executed)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {result.evidence.payload.specialist_executions.map((spec: any, idx: number) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-brand-card border border-brand-border text-[11px] font-poppins space-y-1">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-[var(--text-primary)]">{spec.specialist_id} · {spec.name}</strong>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          {spec.status} · {spec.latency_ms}ms
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-brand-muted">{spec.output}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1 pt-2">
               <span className="font-poppins text-[10px] uppercase font-bold text-brand-muted tracking-wider block">
                 Granular Checks ({result.evidence?.checks?.length || 0})

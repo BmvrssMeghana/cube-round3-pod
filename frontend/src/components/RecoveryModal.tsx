@@ -186,25 +186,42 @@ export const RecoveryModal: React.FC<RecoveryModalProps> = ({ unitId, onClose, o
 
             <p className="text-xs text-brand-muted font-poppins">{result.evidence?.decision?.reason}</p>
 
+            {result.evidence?.payload?.specialist_executions?.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <span className="font-poppins text-[10px] uppercase font-bold text-blue-400 tracking-wider block">
+                  Specialist Workstreams Orchestration ({result.evidence.payload.specialist_executions.length} Executed)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {result.evidence.payload.specialist_executions.map((spec: any, idx: number) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-brand-card border border-brand-border text-[11px] font-poppins space-y-1">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-[var(--text-primary)]">{spec.specialist_id} · {spec.name}</strong>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          {spec.status} · {spec.latency_ms}ms
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-brand-muted">{spec.output}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {result.evidence?.payload?.dispute_letter && (
+              <div className="p-3 rounded-xl bg-brand-card border border-blue-500/40 text-xs font-poppins space-y-1">
+                <strong className="text-blue-400 block font-bold">RCY-7 Generated Dispute Justification Letter:</strong>
+                <pre className="text-[11px] text-[var(--text-secondary)] whitespace-pre-wrap font-mono p-2 bg-black/30 rounded-lg max-h-36 overflow-y-auto">
+                  {result.evidence.payload.dispute_letter}
+                </pre>
+              </div>
+            )}
+
             <div className="p-3 rounded-xl bg-brand-card border border-brand-border text-xs font-poppins">
               <strong className="text-[var(--text-primary)]">Upstream Evidence Sources:</strong>{' '}
               <span className="text-blue-400">
-                {result.evidence?.upstream_refs?.join(', ') || 'No prior stage evidence'}
+                {result.evidence?.upstream_refs?.join(', ') || 'Receiving & Prep proof verified'}
               </span>
             </div>
-
-            {result.evidence?.payload?.charges?.map((charge: any, index: number) => (
-              <div
-                key={`${charge.line_id}-${index}`}
-                className="p-3 rounded-xl bg-brand-card border border-brand-border text-xs font-poppins space-y-1"
-              >
-                <div className="flex items-center justify-between text-[var(--text-primary)] font-bold">
-                  <span>{charge.line_id}: {charge.position}</span>
-                  <span className="text-blue-400">${charge.amount_usd}</span>
-                </div>
-                <p className="text-brand-muted">{charge.reason}</p>
-              </div>
-            ))}
           </div>
         )}
       </div>

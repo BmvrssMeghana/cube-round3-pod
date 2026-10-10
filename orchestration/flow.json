@@ -6,28 +6,12 @@
       "stage": "receiving"
     },
     {
-      "when": {
-        "route": [
-          "fba"
-        ]
-      },
       "stage": "prep"
     },
     {
-      "when": {
-        "route": [
-          "fba",
-          "mfn"
-        ]
-      },
       "stage": "pack"
     },
     {
-      "when": {
-        "returned": [
-          true
-        ]
-      },
       "stage": "returns"
     },
     {

@@ -174,6 +174,103 @@ export const ReturnsModal: React.FC<ReturnsModalProps> = ({ unitId, onClose, onR
 
             <p className="text-xs text-brand-muted font-poppins">{result.evidence?.decision?.reason}</p>
 
+            {result.evidence?.payload?.condition_diff && (
+              <div className="p-3.5 rounded-xl bg-brand-card border border-purple-500/40 space-y-2 font-poppins text-xs">
+                <div className="flex items-center justify-between border-b border-brand-border pb-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-purple-400">
+                    Priority 3 · Before vs. After Condition Diff (Unit Passport Linked)
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">
+                    Passport Verified
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-1 text-[10px]">
+                  <div className="p-2 rounded-lg bg-brand-surface border border-brand-border space-y-1">
+                    <strong className="text-emerald-400 block border-b border-brand-border pb-1 uppercase font-extrabold">
+                      Outbound Dispatch Baseline
+                    </strong>
+                    <div>Seal: {result.evidence.payload.condition_diff.outbound_baseline.seal_status}</div>
+                    <div>Grade: {result.evidence.payload.condition_diff.outbound_baseline.cosmetic_grade}</div>
+                    <div>Accessories: {result.evidence.payload.condition_diff.outbound_baseline.accessories_present}</div>
+                    <div>Bundle Ref: <span className="font-mono text-brand-muted">{result.evidence.payload.condition_diff.outbound_baseline.dispatch_bundle_ref}</span></div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-brand-surface border border-brand-border space-y-1">
+                    <strong className="text-amber-400 block border-b border-brand-border pb-1 uppercase font-extrabold">
+                      Inbound Return Inspection
+                    </strong>
+                    <div>Seal: {result.evidence.payload.condition_diff.inbound_return.seal_status}</div>
+                    <div>Grade: {result.evidence.payload.condition_diff.inbound_return.cosmetic_grade}</div>
+                    <div>Accessories: {result.evidence.payload.condition_diff.inbound_return.accessories_present}</div>
+                    <div>Packaging: {result.evidence.payload.condition_diff.inbound_return.packaging_integrity}</div>
+                  </div>
+                </div>
+                <p className="text-[10px] text-brand-muted italic pt-1">
+                  Delta Summary: {result.evidence.payload.condition_diff.delta_summary}
+                </p>
+              </div>
+            )}
+
+            {result.evidence?.payload?.disposition_advisor && (
+              <div className="p-3.5 rounded-xl bg-brand-card border border-emerald-500/40 space-y-2 font-poppins text-xs">
+                <div className="flex items-center justify-between border-b border-brand-border pb-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Priority 8 · Disposition & Loss Exposure Advisor
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
+                    {result.evidence.payload.disposition_advisor.claim_eligibility}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-[11px] text-center p-2 rounded-lg bg-brand-surface border border-brand-border">
+                  <div>
+                    <span className="text-[10px] text-brand-muted block">MSRP Value</span>
+                    <strong className="text-[var(--text-primary)]">${result.evidence.payload.disposition_advisor.unit_msrp_usd?.toFixed(2)}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-brand-muted block">Est. Salvage</span>
+                    <strong className="text-emerald-400">${result.evidence.payload.disposition_advisor.estimated_salvage_usd?.toFixed(2)}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-brand-muted block">Net Loss Exposure</span>
+                    <strong className={result.evidence.payload.disposition_advisor.net_loss_exposure_usd > 0 ? 'text-brand-crimson' : 'text-emerald-400'}>
+                      ${result.evidence.payload.disposition_advisor.net_loss_exposure_usd?.toFixed(2)}
+                    </strong>
+                  </div>
+                </div>
+                <div className="space-y-1 pt-1">
+                  <span className="text-[10px] font-bold text-brand-muted uppercase block">Financial Route Options:</span>
+                  {result.evidence.payload.disposition_advisor.financial_routes?.map((fr: any, idx: number) => (
+                    <div key={idx} className={`flex items-center justify-between text-[10px] p-1.5 rounded border ${
+                      fr.recommended ? 'bg-emerald-500/10 border-emerald-500/30 font-bold' : 'bg-brand-surface border-brand-border'
+                    }`}>
+                      <span>{fr.action} {fr.note ? `(${fr.note})` : ''}</span>
+                      <span className="text-emerald-400">Net Recovery: ${fr.recovery_amount?.toFixed(2)} (Fee: ${fr.fee_usd?.toFixed(2)})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {result.evidence?.payload?.specialist_executions?.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <span className="font-poppins text-[10px] uppercase font-bold text-blue-400 tracking-wider block">
+                  Specialist Workstreams Orchestration ({result.evidence.payload.specialist_executions.length} Executed)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {result.evidence.payload.specialist_executions.map((spec: any, idx: number) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-brand-card border border-brand-border text-[11px] font-poppins space-y-1">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-[var(--text-primary)]">{spec.specialist_id} · {spec.name}</strong>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          {spec.status} · {spec.latency_ms}ms
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-brand-muted">{spec.output}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1 pt-2">
               <span className="font-poppins text-[10px] uppercase font-bold text-brand-muted tracking-wider block">
                 Condition Checks ({result.evidence?.checks?.length || 0})

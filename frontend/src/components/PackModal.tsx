@@ -130,7 +130,7 @@ export const PackModal: React.FC<PackModalProps> = ({ unitId, onClose, onRunInsp
           <button
             type="button"
             onClick={handleRun}
-            disabled={loading || captures.length !== 1 || !orderLines.trim() || !observedItems.trim()}
+            disabled={loading || captures.length < 1 || !orderLines.trim() || !observedItems.trim()}
             className="pill-btn px-6 py-2.5 rounded-full bg-brand-yellow text-black font-heading font-extrabold text-xs uppercase hover:bg-white transition-all shadow-md"
           >
             {loading ? 'Reconciling Order…' : 'Run Pack Verification'}
@@ -155,6 +155,73 @@ export const PackModal: React.FC<PackModalProps> = ({ unitId, onClose, onRunInsp
             </div>
 
             <p className="text-xs text-brand-muted font-poppins">{result.evidence?.decision?.reason}</p>
+
+            {result.evidence?.payload?.shipment_readiness_gate && (
+              <div className="p-3.5 rounded-xl bg-brand-card border border-emerald-500/40 space-y-2 font-poppins">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Priority 2 · Shipment Readiness Gate
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    {result.evidence.payload.shipment_readiness_gate.gate_verdict}
+                  </span>
+                </div>
+                <div className="text-[11px] text-[var(--text-secondary)] font-medium">
+                  Conveyor Action: <strong className="text-emerald-400">{result.evidence.payload.shipment_readiness_gate.conveyor_action}</strong>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                  {result.evidence.payload.shipment_readiness_gate.gate_checks?.map((gc: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between text-[10px] p-1.5 rounded bg-brand-surface border border-brand-border">
+                      <span className="text-[var(--text-secondary)]">{gc.criterion}</span>
+                      <strong className={gc.status === 'PASS' ? 'text-emerald-400' : 'text-amber-400'}>{gc.status}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {result.evidence?.payload?.dispatch_evidence_bundle && (
+              <div className="p-3.5 rounded-xl bg-brand-card border border-blue-500/40 space-y-2 font-poppins text-xs">
+                <div className="flex items-center justify-between border-b border-brand-border pb-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                    Priority 5 · Dispatch Evidence Bundle
+                  </span>
+                  <span className="text-[10px] font-mono text-brand-muted">
+                    {result.evidence.payload.dispatch_evidence_bundle.bundle_id}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div>Pre-Seal Hash: <strong className="font-mono text-emerald-400">{result.evidence.payload.dispatch_evidence_bundle.pre_seal_snapshot_hash}</strong></div>
+                  <div>Tracking Ref: <strong className="text-[var(--text-primary)]">{result.evidence.payload.dispatch_evidence_bundle.carrier_tracking_ref}</strong></div>
+                  <div>Gross / Tare Wt: <strong className="text-[var(--text-primary)]">{result.evidence.payload.dispatch_evidence_bundle.gross_weight_kg} kg / {result.evidence.payload.dispatch_evidence_bundle.tare_weight_kg} kg</strong></div>
+                  <div>Box Spec: <strong className="text-[var(--text-primary)]">{result.evidence.payload.dispatch_evidence_bundle.box_specification}</strong></div>
+                </div>
+                <p className="text-[10px] text-brand-muted italic pt-1">
+                  🔒 {result.evidence.payload.dispatch_evidence_bundle.retention_policy}
+                </p>
+              </div>
+            )}
+
+            {result.evidence?.payload?.specialist_executions?.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <span className="font-poppins text-[10px] uppercase font-bold text-blue-400 tracking-wider block">
+                  Specialist Workstreams Orchestration ({result.evidence.payload.specialist_executions.length} Executed)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {result.evidence.payload.specialist_executions.map((spec: any, idx: number) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-brand-card border border-brand-border text-[11px] font-poppins space-y-1">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-[var(--text-primary)]">{spec.specialist_id} · {spec.name}</strong>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          {spec.status} · {spec.latency_ms}ms
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-brand-muted">{spec.output}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1 pt-2">
               <span className="font-poppins text-[10px] uppercase font-bold text-brand-muted tracking-wider block">

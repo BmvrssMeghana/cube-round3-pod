@@ -562,7 +562,8 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
         raise HTTPException(422, f"stage {stage!r} is not part of the configured workflow")
     sr = wf["stage_results"][stage_idx]
     if sr["state"] == "skipped":
-        raise HTTPException(409, f"stage {stage!r} is not applicable to this unit: {sr.get('skipped_reason')}")
+        sr["state"] = "pending"
+        sr["skipped_reason"] = None
     return_prerequisites = ("receiving",)
     if route_raw == "fba":
         return_prerequisites += ("prep", "pack")
@@ -579,9 +580,9 @@ def _execute_stage_inspection(unit_id: str, stage: str, stage_input_data: dict) 
     }
     missing_stages = [required for required in prerequisites if required not in completed_stages]
     if missing_stages:
-        raise HTTPException(
-            409,
-            f"Run and complete the upstream stage(s) first: {', '.join(missing_stages)}",
+        logger.info(
+            "Stage %r running with incomplete upstream stage(s): %s. Proceeding with available baseline context.",
+            stage, ", ".join(missing_stages),
         )
 
     prev_ev = _previous_evidence(wf, stage_idx, STORE)

@@ -242,6 +242,69 @@ export const PrepModal: React.FC<PrepModalProps> = ({ unitId, onClose, onRunInsp
 
             <p className="text-xs text-brand-muted font-poppins">{result.evidence?.decision?.reason}</p>
 
+            {result.evidence?.payload?.adaptive_prep_plan && (
+              <div className="p-3.5 rounded-xl bg-brand-card border border-blue-500/40 space-y-2 font-poppins text-xs">
+                <div className="flex items-center justify-between border-b border-brand-border pb-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                    Priority 4 · Adaptive Prep Plan
+                  </span>
+                  <span className="text-[10px] font-mono text-brand-muted">
+                    {result.evidence.payload.adaptive_prep_plan.plan_id}
+                  </span>
+                </div>
+                <div className="text-[11px] text-[var(--text-secondary)] font-medium">
+                  Channel: <strong className="text-[var(--text-primary)]">{result.evidence.payload.adaptive_prep_plan.target_channel}</strong>
+                </div>
+                <div className="space-y-1 pt-1">
+                  {result.evidence.payload.adaptive_prep_plan.prescribed_steps?.map((st: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between text-[10px] p-1.5 rounded bg-brand-surface border border-brand-border">
+                      <span><strong>Step {st.step}: {st.action}</strong> — {st.specification}</span>
+                      <strong className={st.status === 'COMPLIANT' || st.status === 'PASSED' ? 'text-emerald-400' : 'text-amber-400'}>{st.status}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {result.evidence?.payload?.rework_prevention_map && (
+              <div className="p-3.5 rounded-xl bg-brand-card border border-amber-500/40 space-y-2 font-poppins text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                    Priority 7 · Rework Prevention Map
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    Penalty Avoided: ${result.evidence.payload.rework_prevention_map.fba_penalty_avoided_usd?.toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-[11px] text-[var(--text-secondary)]">
+                  <div>Risk: <strong className="text-[var(--text-primary)]">{result.evidence.payload.rework_prevention_map.defect_risk}</strong></div>
+                  <div>Station: <strong className="text-brand-yellow">{result.evidence.payload.rework_prevention_map.corrective_workstation}</strong></div>
+                  <div>Impact: <strong className="text-emerald-400">{result.evidence.payload.rework_prevention_map.downstream_impact}</strong></div>
+                </div>
+              </div>
+            )}
+
+            {result.evidence?.payload?.specialist_executions?.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <span className="font-poppins text-[10px] uppercase font-bold text-blue-400 tracking-wider block">
+                  Specialist Workstreams Orchestration ({result.evidence.payload.specialist_executions.length} Executed)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {result.evidence.payload.specialist_executions.map((spec: any, idx: number) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-brand-card border border-brand-border text-[11px] font-poppins space-y-1">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-[var(--text-primary)]">{spec.specialist_id} · {spec.name}</strong>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          {spec.status} · {spec.latency_ms}ms
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-brand-muted">{spec.output}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1 pt-2">
               <span className="font-poppins text-[10px] uppercase font-bold text-brand-muted tracking-wider block">
                 Packaging Compliance Checks ({result.evidence?.checks?.length || 0})

@@ -182,8 +182,8 @@ def import_data() -> dict[str, Any]:
         for sr in workflow["stage_results"]:
             st = sr["stage"]
             if st == "recovery" and not fee_lines:
-                sr["state"] = "skipped"
-                sr["skipped_reason"] = "No matching fee report rows were imported"
+                sr["state"] = "pending"
+                sr["skipped_reason"] = None
                 continue
             if st in stage_recs or (st == "recovery" and fee_lines):
                 rec_data = stage_recs.get(st) or (fee_lines[0] if fee_lines else {})

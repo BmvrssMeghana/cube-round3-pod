@@ -78,6 +78,34 @@ export const UnitPassportCard: React.FC<UnitPassportCardProps> = ({ workflow, ev
                 {ev.decision.reason}
               </div>
 
+              {/* Feature Evidence Highlights */}
+              {ev.payload?.dispatch_evidence_bundle && (
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[11px] font-poppins space-y-1">
+                  <div className="flex items-center justify-between text-blue-400 font-bold uppercase text-[10px]">
+                    <span>📦 Dispatch Evidence Bundle (Pre-Seal Proof)</span>
+                    <span className="font-mono text-slate-300">{ev.payload.dispatch_evidence_bundle.bundle_id}</span>
+                  </div>
+                  <div className="text-slate-300 font-mono text-[10px]">
+                    Hash: {ev.payload.dispatch_evidence_bundle.pre_seal_snapshot_hash} | Carrier: {ev.payload.dispatch_evidence_bundle.carrier_tracking_ref} | Wt: {ev.payload.dispatch_evidence_bundle.gross_weight_kg}kg
+                  </div>
+                </div>
+              )}
+
+              {ev.payload?.condition_diff && (
+                <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30 text-[11px] font-poppins space-y-1">
+                  <div className="flex items-center justify-between text-purple-400 font-bold uppercase text-[10px]">
+                    <span>🔄 Before vs. After Condition Diff (Outbound vs. Return)</span>
+                    <span className="text-purple-300">Delta Logged</span>
+                  </div>
+                  <div className="text-slate-300 text-[10px]">
+                    Outbound Seal: {ev.payload.condition_diff.outbound_baseline?.seal_status} ➔ Return Seal: {ev.payload.condition_diff.inbound_return?.seal_status}
+                  </div>
+                  <div className="text-slate-400 italic text-[10px]">
+                    {ev.payload.condition_diff.delta_summary}
+                  </div>
+                </div>
+              )}
+
               {/* Granular Checks */}
               {checks.length > 0 && (
                 <div className="p-3 rounded-lg bg-black/40 border border-brand-border/60 space-y-2">
