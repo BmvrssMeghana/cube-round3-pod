@@ -144,44 +144,6 @@ flowchart TB
     class C1,C2,C3,C4,C5,C6,C7 recovery;
 ```
 
-### Specialist count
-
-  ------------------------------------------------------------------------
-  Stage manager                          Specialists Primary
-                                                     responsibility
-  --------------------- ---------------------------- ---------------------
-  Receiving                                        6 Validate incoming
-                                                     identity, quantity,
-                                                     variants, and damage
-
-  Prep                                             6 Check applicable
-                                                     preparation,
-                                                     packaging, warning,
-                                                     and labelling
-                                                     requirements
-
-  Pack                                             5 Reconcile packed
-                                                     items with the order
-                                                     and determine sealing
-                                                     readiness
-
-  Returns                                          6 Verify returned item
-                                                     identity,
-                                                     completeness,
-                                                     condition, and
-                                                     disposition
-
-  Recovery                                         7 Match fee lines with
-                                                     evidence, suppress
-                                                     duplicates, and
-                                                     assemble claim
-                                                     recommendations
-
-  **Total**                                   **30** **Logical specialist
-                                                     workstreams within
-                                                     five stage managers**
-  ------------------------------------------------------------------------
-
 ## 3. Evidence and workflow state
 
 The orchestrator builds each stage input using the unit, route,
