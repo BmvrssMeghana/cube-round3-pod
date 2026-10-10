@@ -1,199 +1,246 @@
-# Architecture
+# CUBE Commerce Operations — Architecture
 
-This document describes the **starter**. At the bottom is a section for **your Pod's architecture**, which you must fill in and which is part of the submission. A submission whose `ARCHITECTURE.md` still only describes the starter has not documented its system.
+This document describes the current integrated application and its stage-level specialist responsibilities. It distinguishes the running implementation from the more granular CV/OCR responsibilities that guide future agent decomposition.
 
-## 1. The system
-
-```text
-                POD
-                 │
-       ┌─────────▼─────────┐      owns workflow state; derives status and final outcome from the evidence chain
-       │    Orchestrator   │      routes · validates · records evidence · retries · handles failures and UNCERTAIN
-       └─────────┬─────────┘
-                 │  Agent Input ▼          ▲ Agent Output (evidence)
-       ┌─────────▼─────────┐
-       │     Receiving     │
-       └─────────┬─────────┘
-                 ↓
-       ┌───────────────────┐
-       │       Prep        │   (FBA units)
-       └─────────┬─────────┘
-                 ↓
-       ┌───────────────────┐
-       │       Pack        │   (merchant-fulfilled / 3PL units)
-       └─────────┬─────────┘
-                 ↓
-       ┌───────────────────┐
-       │      Returns      │   (if a return happened)
-       └─────────┬─────────┘
-                 ↓
-       ┌───────────────────┐
-       │     Recovery      │   reads ALL accumulated evidence
-       └─────────┬─────────┘
-                 ↓
-          Final Outcome        derived by the orchestrator, not copied from any agent
-
-  shared/schemas · shared/contracts · shared/utils      data/input · data/sample · data/expected      examples/
-```
-
-The arrows show the *expected commerce journey*. Physically, every hand-off goes through the orchestrator ([`INTEGRATION-GUIDE.md`](INTEGRATION-GUIDE.md) section 1).
-
-## 2. Responsibilities
-
-| Component | Responsible for | Not responsible for |
-|---|---|---|
-| **Agent** (`agents/<stage>/`) | One stage's judgment, returned as an Agent Output with an Evidence Record. Failing open. Refusing other tenants. | Calling other agents. Setting workflow state. Rewriting earlier evidence. |
-| **Orchestrator** (`orchestration/`) | Starting workflows; identifying the current stage; invoking agents with context; validating and recording evidence; updating state; routing; retries; failures; UNCERTAIN; the final outcome. | Making stage judgments. Fabricating or deleting evidence. Turning UNCERTAIN into PASS/FAIL without an explicit rule. |
-| **Contract** (`shared/schemas/`) | One strict set of data shapes. | Agent-specific logic (that goes in `payload`). |
-| **Stubs** (`agents/*/app.py` as shipped) | Replaying Round 2 CSV rows as valid evidence, so the plumbing can be tested. | Pretending to be agents. |
-
-## 3. Shared data
-
-| Object | Owner | Lives in |
-|---|---|---|
-| Evidence Record | the agent that produced it (immutable) | the evidence store |
-| Workflow State | **the orchestrator** | the workflow store |
-| Overrides | the orchestrator records them; a person makes them | Workflow State (`overrides[]`), referencing evidence |
-| Final Outcome | **the orchestrator**, derived | Workflow State (`final_outcome`) |
-| Captures | the Pod | `data/input/<subject>/<stage>/`, referenced by `sha256` |
-
-## 4. Evidence flow and workflow state
+## 1. System overview
 
 ```text
-Agent Result → Evidence Record → Orchestrator state transition → Next stage → New evidence → Updated workflow state → Final Outcome
+ Browser
+   │
+   ▼
+ React + TypeScript + Vite
+   │ bearer token; organization is derived from authenticated account
+   ▼
+ FastAPI application (orchestration/api.py)
+   ├── Authentication and organization authorization
+   ├── Workflow, inspection, dashboard, review, and evidence APIs
+   ├── Orchestrator ── conditional routing / retries / state and outcome rollup
+   │      ├── Receiving manager (agents/receiving/app.py)
+   │      ├── Prep manager      (agents/prep/app.py)
+   │      ├── Pack manager      (agents/pack/app.py)
+   │      ├── Returns manager   (agents/returns/app.py)
+   │      └── Recovery manager  (agents/recovery/app.py)
+   └── Database access (orchestration/db.py, orchestration/store.py)
+          ├── SQLite: data/cube_unified.db by default
+          └── PostgreSQL: when DATABASE_URL is configured
 ```
 
-- Each stage's evidence is stored and passed to **every later stage** as `previous_evidence`.
-- State is `PENDING → IN_PROGRESS → COMPLETED`, or `FAILED` / `BLOCKED` / `RECOVERY_REQUIRED` ([`ORCHESTRATION-GUIDE.md`](ORCHESTRATION-GUIDE.md) section 5), always derived from the evidence and overrides.
-- `transitions[]` is the audit trail.
-- A reviewer can walk from the Final Outcome to `contributing_records`, to checks, to `evidence_refs`, to the `sha256` of the exact bytes examined.
+The default manifests in `agents/<stage>/agent.json` use in-process execution. The orchestrator can use the configured HTTP client mode for a stage, but the standard local setup is one API process calling the five stage handlers directly.
 
-## 5. Error handling
+## 2. Runtime components and ownership
 
-Every failure is **recorded and never becomes success**: a degraded evidence record stands in (no checks, UNCERTAIN, the error), the stage is `error`, the workflow `FAILED` with outcome `INCOMPLETE`. Transient failures retry; refusals and invalid output do not; UNCERTAIN is preserved; `resume` retries. Full table: [`ORCHESTRATION-GUIDE.md`](ORCHESTRATION-GUIDE.md) section 8. Tenancy: `org_id` on every request, record and workflow; a record about another org is rejected as a security event; **your storage must enforce it too**.
+| Component | Owns | Does not own |
+|---|---|---|
+| **Frontend** (`frontend/src/`) | Landing/sign-in flow, navigation, unit operations, passports, review queue, dashboards, analytics, and theme preference. | Authentication decisions, tenant authorization, or persistent workflow state. |
+| **FastAPI API** (`orchestration/api.py`) | Authentication middleware, organization authorization, request validation/dispatch, and dashboard/workflow/inspection endpoints. | Stage-specific business judgments or the final outcome policy. |
+| **Orchestrator** (`orchestration/orchestrator.py`) | Creating workflows, evaluating stage conditions, invoking stage managers, validating outputs, recording stage results, resume/override operations, and maintaining workflow transitions. | Vision judgments or rewriting the meaning of an agent's raw evidence. |
+| **Stage manager** (`agents/<stage>/app.py`) | One stage's checks and decision, returned as a structured result with evidence. | Calling the next stage directly or choosing the workflow's final outcome. |
+| **Rollup** (`orchestration/rollup.py`) | Deriving workflow status and final outcome from stage evidence and effective overrides. | Changing stage evidence or silently converting UNCERTAIN to PASS. |
+| **Database layer** (`orchestration/db.py`, `orchestration/store.py`) | Units, workflows, evidence, checks, source rows, claims, organization accounts, and review history. | Deciding which stage should execute next. |
 
-## 6. Final outcome
+## 3. Stage flow and conditional routing
 
-`CLEAN`, `CLAIM_RECOMMENDED`, `EXCEPTION`, `NEEDS_REVIEW` or `INCOMPLETE`, with the reason, the contributing evidence, `needs_human`, and `provisional` (true unless the workflow is `COMPLETED`). Default rules: [`ORCHESTRATION-GUIDE.md`](ORCHESTRATION-GUIDE.md) section 6.
+The standard flow is data-driven in `orchestration/flow.json`:
 
-## 7. What is fixed and what is yours
+```text
+Receiving
+   │
+   ├── FBA ──▶ Prep
+   │             │
+   └─────────────┴──▶ Pack (configured for FBA and MFN)
+                           │
+                 returned=true?
+                     yes │
+                         ▼
+                      Returns
+                         │
+                         ▼
+                      Recovery
+                         │
+                         ▼
+                 Final workflow outcome
+```
 
-**Fixed (the contract, strict):**
+More precisely, the current flow applies these conditions:
 
-- The five required agents and their stages (Specialist Pods: four agents plus integration work, see [`FAQ.md`](FAQ.md))
-- Common evidence requirements: the Agent Input/Output and Evidence Record shapes; PASS / FAIL / UNCERTAIN; the status vocabularies
-- Required traceability: workflow id, agent id, hashes, `upstream_refs`, overrides that reference what they supersede
-- An orchestrator that owns workflow state and produces a **Final Outcome**
-- Minimum testing, and the submission and evaluation requirements ([`SUBMISSION-GUIDE.md`](SUBMISSION-GUIDE.md), [`ROUND3-RUBRIC.md`](ROUND3-RUBRIC.md))
-
-**Participant-designed (the implementation, flexible):**
-
-- Internal architecture, programming language, frameworks, how each agent is built
-- How the orchestrator is implemented (the starter is one option; LangGraph, a queue, a state machine, your own)
-- The communication mechanism (in-process, HTTP, queue) as long as the contract holds
-- Database, persistence, deployment platform
-- UI, review queue, dashboards
-- Additional services, additional features
-- The final-outcome policy, routing and `on_uncertain` / `on_error` policies (documented in `docs/decisions.md`)
-
-## 8. Extension points
-
-| You want to… | Change |
+| Stage | Condition |
 |---|---|
-| Add or reroute a stage | `orchestration/flow.json` (and write a decision) |
-| Change the final decision or status rules | `orchestration/rollup.py` (and its tests, and a decision) |
-| Plug in a real agent | `agents/<stage>/app.py` + `agent.json` |
-| Run an agent as a service in any language | `agent.json` `mode: "http"` + [`agent-api.md`](shared/contracts/agent-api.md) |
-| Run your own subjects | `data/input/<subject>/<stage>/` + a cases file |
-| Add agent-specific data to evidence | `payload` (never the envelope) |
-| Persist to a database | implement the four store methods in `orchestration/store.py` |
+| Receiving | Always first. |
+| Prep | `route` is `fba`. |
+| Pack | `route` is `fba` or `mfn`. |
+| Returns | `returned` is `true`. |
+| Recovery | Always after the preceding applicable stages. |
 
-## 9. Deployment options (yours)
+The flow also defines a 30-second stage timeout, one retry, and `continue` defaults for uncertain results and errors. Routing changes belong in `orchestration/flow.json`; outcome policy belongs in `orchestration/rollup.py`.
 
-- **Single process:** `uvicorn orchestration.api:app` with all agents `inproc`. Simplest.
-- **Orchestrator + agent services:** each agent its own process, `mode: "http"`, `<STAGE>_URL` set; `GET /health` for readiness.
-- Whatever you pick, the demo runs from the submitted commit and any URL works without your accounts. The API ships with **no authentication**: add it before exposing it.
+## 4. Specialist workstreams inside each manager
 
----
+The named specialists below describe the work that a manager must coordinate and the evidence it should produce. They are **logical workstreams**, not 30 independent API services or separately scheduled agents. The current workflow boundary remains five stage managers, each called through one `handle(request)` entry point. See [`docs/agent-design.md`](docs/agent-design.md) for the longer design brief.
 
-## Your Pod's Architecture: EvidenceChain Operations Platform
+### Receiving — 6 specialists
 
-### 1. System Architecture Diagram
+| Specialist | Responsibility | Expected result |
+|---|---|---|
+| **REC-1 · Capture & Quality Gate** (rules/CV) | Evaluate capture acceptability and integrity. | Accepted shots with SHA-256 references, or retake guidance. |
+| **REC-2 · Identity Resolver** (OCR + vision) | Compare observed item identity to PO identity. | SKU/ASIN verdict and observed identifiers. |
+| **REC-3 · Quantity Counter** (vision) | Count cartons and units per carton. | Expected and observed quantities with discrepancy checks. |
+| **REC-4 · Variant Checker** (vision) | Compare visual variant attributes against the PO. | Colour/size comparison and verdict. |
+| **REC-5 · Damage Inspector** (vision) | Identify carton and unit damage. | Findings and relevant image regions. |
+| **REC-6 · Decision & Evidence Builder** (rules) | Consolidate checks and determine the stage result. | Checks, disposition, supplier-claim draft when appropriate, and evidence links. |
+
+### Prep — 6 specialists
+
+| Specialist | Responsibility | Expected result |
+|---|---|---|
+| **PRP-1 · Requirement Resolver** (rules) | Select applicable category requirements. | Versioned rules and visually-checkable flags. |
+| **PRP-2 · Capture Guide & Gate** (rules/CV) | Verify required views are present and usable. | Accepted capture set or specific retake request. |
+| **PRP-3 · Polybag & Seal Checker** (vision) | Check bag presence and seal. | Observations and seal verdict. |
+| **PRP-4 · Warning Reader** (OCR + vision) | Read and assess required warning labels. | Warning visibility and legibility result. |
+| **PRP-5 · Label & Barcode Inspector** (vision + OCR) | Inspect FNSKU placement, barcode coverage, expiry, and handling marks. | Per-rule label and barcode findings. |
+| **PRP-6 · Compliance Decider** (rules) | Consolidate applicable prep checks. | Cited per-rule table, overall status, and evidence. |
+
+### Pack — 5 specialists
+
+| Specialist | Responsibility | Expected result |
+|---|---|---|
+| **PCK-1 · Capture Guide & Gate** (rules/CV) | Assess required open-box views and occlusion. | Accepted shots or retake guidance. |
+| **PCK-2 · Item Detector** (vision) | Identify detected item types and look-alikes. | Detected types and identity flags. |
+| **PCK-3 · Quantity Counter** (vision) | Count each expected item type. | Per-item observed counts. |
+| **PCK-4 · Order Reconciler** (rules) | Compare observed contents with order lines. | Missing, wrong, extra, and quantity discrepancy table. |
+| **PCK-5 · Seal Decider** (rules) | Decide whether fulfillment can proceed. | `SEAL`, `STOP & FIX`, or `UNCERTAIN`, with evidence. |
+
+### Returns — 6 specialists
+
+| Specialist | Responsibility | Expected result |
+|---|---|---|
+| **RTN-1 · Capture Guide** (rules/CV) | Check required return views. | Accepted required shots or retake guidance. |
+| **RTN-2 · Identity Verifier** (vision + OCR) | Match returned item identity against the original order and upstream evidence. | PASS / FAIL / UNCERTAIN identity verdict. |
+| **RTN-3 · Completeness Checker** (vision) | Verify included components. | Present/missing result per component. |
+| **RTN-4 · Condition Grader** (vision) | Assess item and packaging condition. | Condition grade and damage regions. |
+| **RTN-5 · Disposition Recommender** (rules) | Apply disposition policy to return findings. | Restock, refurbish, liquidate, or dispose recommendation. |
+| **RTN-6 · Evidence & Explanation Builder** (rules) | Explain the decision and compare outbound and returned evidence. | Reasoning, before/after comparison, and evidence links. |
+
+### Recovery — 7 specialists
+
+| Specialist | Responsibility | Expected result |
+|---|---|---|
+| **RCY-1 · Report Parser** (rules) | Normalize fee-report rows. | Structured charge lines and parse errors. |
+| **RCY-2 · Unit Matcher** (rules) | Link charges to a unit, shipment, and organization. | Charge-to-unit references. |
+| **RCY-3 · Evidence Retriever** (rules) | Retrieve relevant upstream manager records. | Organization-scoped evidence bundle. |
+| **RCY-4 · Duplicate & Reimbursed Detector** (rules) | Detect duplicate or already-paid lines. | Suppression flags and reasons. |
+| **RCY-5 · Charge-Evidence Classifier** (rules) | Compare charge claims with the evidence. | `CONTRADICTED`, `SUPPORTED`, `SILENT`, or `UNCERTAIN` position. |
+| **RCY-6 · Claim Assembler** (rules) | Assemble eligible charge lines and their provenance. | Claim total, source record references, and hashes. |
+| **RCY-7 · Explanation Writer** (rules/template) | Explain each claim and non-claim. | Per-line human-readable rationale. |
+
+### Current implementation boundary
+
+The responsibilities above specify the specialist capability model; they are not a claim that every listed CV/OCR module is already wired into the live path. The current runtime dispatches to five Python handlers under `agents/<stage>/app.py`. Those handlers use structured stage/source records, CSV data, and operator-provided observations to produce deterministic checks. For example, Prep loads the category rule table from `data/prep_requirements.json`, Pack reconciles expected and observed order lines, Returns maps structured condition inputs to dispositions, and Recovery compares normalized fee rows with saved upstream records.
+
+Consequently, image file hashes and evidence references establish traceability, but do not by themselves prove that a vision model analyzed the image. Connecting the capture gate, OCR, and vision responsibilities to a model or vision service requires wiring those components into the running stage handlers and adding integration tests for their outputs. Older or agent-specific code under `agents/<stage>/src/` is not automatically executed merely because it is present in the repository.
+
+## 5. Evidence and workflow state
 
 ```text
-                                UNIFIED FRONTEND (React 18 / Vite / TypeScript)
-                                                │
-                                                ▼
-                                    UNIFIED BACKEND API (FastAPI)
-                                                │
-                                                ▼
-                                     CENTRAL ORCHESTRATOR
-                                                │
-    ┌───────────────────┬───────────────────┼───────────────────┬───────────────────┐
-    ▼                   ▼                   ▼                   ▼                   ▼
-Receiving Manager   Prep Manager        Pack Manager       Returns Manager     Recovery Manager
-  (Intake/PO)     (Packaging/Prep)    (Carton Pack)      (Return Grade)      (Financial Dispute)
-  [Gemini Vision] [Polybag/OCR Engine][Claude 3.5 Sonnet] [Gemini Vision]     [SLA/Evidence Matcher]
-    │                   │                   │                   │                   │
-    └───────────────────┴───────────────────┼───────────────────┴───────────────────┘
-                                                ▼
-                                    IMMUTABLE EVIDENCE STORE
-                                                │
-                                                ▼
-                                     CONTINUOUS UNIT PASSPORT
+Unit + route + captures + source data
+                │
+                ▼
+       Orchestrator builds stage input
+                │ subject / stage captures / prior evidence / overrides
+                ▼
+          Stage manager handler
+                │ decision + checks + payload + evidence references
+                ▼
+       Validate and persist stage result
+                │
+                ├── evaluate next flow condition
+                ├── create next stage input with previous evidence
+                └── derive workflow status and final outcome
 ```
 
-### 2. What Each Agent Really Is (No Stubs)
+The common evidence record carries stage identity, workflow and subject references, verdict, checks, timestamps, model/producer metadata, input references, and stage-specific payload. Stage results are associated with the workflow; later stages receive applicable prior evidence. Recovery can also read saved evidence for the matched unit to evaluate fee lines.
 
-- **Receiving Manager (`agents/receiving/src/`):** Real multimodal computer vision engine using Google Gemini / OpenAI. Performs PO quantity verification, SKU matching, variant check, carton/unit damage inspection, and component validation. Emits `RCV-<UnitID>` evidence records.
-- **Prep Manager (`agents/prep/src/`):** Real automated polybag sealing check, suffocation warning OCR verification, FNSKU label placement evaluation, barcode coverage audit, and physical scale dimension/weight measurement recorder. Emits `PRP-<UnitID>` evidence records.
-- **Pack Manager (`agents/pack/src/`):** Real Anthropic Claude 3.5 Sonnet vision engine with 2D bounding box detection algorithm `[ymin, xmin, ymax, xmax]`. Reconciles box contents against order manifests and emits `SEAL` (`PASS`), `STOP_AND_FIX` (`FAIL`), or `MANUAL_REVIEW` (`UNCERTAIN`). Emits `PCK-<UnitID>` evidence records.
-- **Returns Manager (`agents/returns/src/`):** Real multimodal LLM visual inspection evaluating returned item identity, component completeness, physical damage grading under Amazon published condition standards, and disposition assignment (`restock`, `refurbish`, `liquidate`, `dispose`). Emits `RTN-<UnitID>` evidence records.
-- **Recovery Manager (`agents/recovery/src/`):** Real deterministic SLA calculation engine and evidence lineage matcher. Cross-references fee charge reports against upstream evidence across Receiving, Prep, Pack, and Returns to generate claim recommendations with content SHA-256 hashes. Emits `RCY-<UnitID>` evidence records.
+The database layer maintains tables for organizations and users, units, workflows, captures, evidence records and checks, upstream evidence references, source CSV records, charges and recovery claims, and human reviews. `DATABASE_URL` selects PostgreSQL; when it is unset, the API uses `data/cube_unified.db` with SQLite. The separate CLI runner can use the file-based store; it is not the web API's persistence backend.
 
-### 3. Orchestrator Architecture
+Human overrides are recorded against the evidence record they supersede. They affect effective workflow decisions without erasing the original result. The database also records human-review activity. Treat the workflow and linked records as the audit trail; do not describe storage as cryptographically immutable unless the persistence implementation enforces that guarantee.
 
-- **State Management:** The Central Orchestrator owns all workflow state (`orchestration/store.py`). Workflow state is stored using `FileStore` (JSON files under `out/workflows/` and `out/evidence/`) with SQLite / PostgreSQL persistence models.
-- **Retries & Resilience:** Transient agent timeouts retry up to `retries` limit (configured in `orchestration/flow.json`). Refusals (HTTP 4xx) and invalid tenant requests do not retry and produce degraded error records.
-- **Overrides Mechanism:** Human verdict overrides append immutable entries to `overrides[]` in workflow state without mutating or deleting raw AI evidence records (`docs/decisions.md` ADR-03).
-- **Idempotency:** Request execution keys use `<workflow_id>:<stage>` to prevent duplicate execution.
+## 6. Status, outcome, and uncertainty
 
-### 4. Routing & Final Outcome Logic
+`orchestration/rollup.py` is the authoritative policy. It derives status and final outcome from the applicable stage results and overrides.
 
-- **Dynamic Flow Routing:** Evaluated via `orchestration/flow.json`. Prep runs for FBA orders (`route: ["fba"]`), Pack runs for Merchant-fulfilled orders (`route: ["mfn"]`), and Returns runs when `returned: true`.
-- **Outcome Rollup Rules (`orchestration/rollup.py`):**
-  - Any stage `FAIL` → `EXCEPTION` (or `CLAIM_RECOMMENDED` if Recovery contradicts a fee charge).
-  - Any stage `UNCERTAIN` with `needs_human: true` → workflow status `BLOCKED`, final outcome `NEEDS_REVIEW`.
-  - Incomplete required stage → `INCOMPLETE`.
-  - All required stages `PASS` → `CLEAN`.
-- **Weak Evidence & Uncertainty:** SILENT/UNCERTAIN charges in Recovery are never claimed to prevent seller standing degradation.
+| Workflow status | Meaning |
+|---|---|
+| `PENDING` | No stage has run. |
+| `FAILED` | A required stage ended in an error. |
+| `RECOVERY_REQUIRED` | A non-recovery stage failed and Recovery has not completed. |
+| `BLOCKED` | A human decision is required or the workflow is halted. |
+| `IN_PROGRESS` | Applicable stages remain. |
+| `COMPLETED` | All applicable stages finished and nothing is waiting for a human decision. |
 
-### 5. Multi-Tenant Isolation
+| Final outcome | Meaning |
+|---|---|
+| `CLAIM_RECOMMENDED` | Recovery's effective verdict is FAIL (evidence contradicts at least one assessed charge). |
+| `EXCEPTION` | A non-recovery stage has an effective FAIL verdict. |
+| `INCOMPLETE` | A required stage did not complete. |
+| `NEEDS_REVIEW` | A stage explicitly requires a human decision. |
+| `CLEAN` | Applicable stage evidence passed with no higher-priority outcome. |
 
-- **Enforcement:** `org_id` is required on every request header, workflow state object, evidence record, and file path.
-- **Storage-Level Security:** File storage paths enforce strict org prefix isolation (`out/workflows/WF-<org_id>-...`). The orchestrator rejects evidence from mismatched tenants with a security event.
-- **Testing:** Verified via `tests/integration/test_workflow_state.py` using `org_demo_alpha` and `org_demo_bravo`.
+The policy preserves `UNCERTAIN`; a result is not silently promoted to PASS. Flow defaults specify whether to continue or stop on uncertainty or errors, while the rollup reports the resulting workflow state.
 
-### 6. Failure Model
+## 7. Authentication and organization isolation
 
-- **Agent Failure Handling:** When an agent is stopped, times out, or errors out, the orchestrator records a degraded `pending`/`error` evidence record with `verdict: UNCERTAIN` and `needs_human: true`.
-- **System Outcome:** The workflow transitions to status `FAILED` with outcome `INCOMPLETE`. It never crashes the orchestrator and never reports false success.
-- **Recovery & Resume:** Once the agent service is restored, calling `POST /workflows/{id}/resume` retries the failed stage.
+- `/auth/login` and `/auth/register` issue bearer sessions; `/auth/me` returns the current account.
+- `AUTH_TOKEN_SECRET` is required and must contain at least 32 characters. Tokens have an eight-hour lifetime.
+- The API derives the authorized `org_id` from the authenticated token and rejects requests for another organization.
+- Dashboard, unit, workflow, source-record, and evidence queries are organization-scoped.
+- Fresh local/demo databases receive `org_alpha` / `root` and `org_bravo` / `root` accounts for the two demo organizations. These are convenience credentials only and must be changed or removed before deployment.
+- Registration can create a new organization. Registration into an existing team can be restricted by `CUBE_ALPHA_INVITE_CODE` or `CUBE_BRAVO_INVITE_CODE`.
 
-### 7. Deployment
+Authentication and tenant isolation should be tested at the API/data-access boundary, not inferred from the frontend's selected view.
 
-- **Local Execution:**
-  ```bash
-  # Start unified FastAPI backend server
-  python -m uvicorn orchestration.api:app --host 0.0.0.0 --port 8100 --reload
+## 8. API and frontend surfaces
 
-  # Start unified React Vite frontend SPA
-  cd frontend && npm run dev
-  ```
-- **Live URLs:** Frontend available at `http://localhost:5173`, Backend API at `http://localhost:8100`.
+The unified API in `orchestration/api.py` exposes:
 
-### 8. Known Limits
+- Authentication: `POST /auth/login`, `POST /auth/register`, `GET /auth/me`.
+- Health and metrics: `GET /health`, `GET /metrics`.
+- Dashboards: `/dashboard/summary`, `/dashboard/timeseries`, `/dashboard/activity`, `/dashboard/locations`, and `/dashboard/agents/{stage}`.
+- Units and workflow: `POST /units`, `GET/POST /workflows`, workflow detail/evidence, and run/resume/override actions.
+- Direct stage inspection: `POST /inspect/{receiving|prep|pack|returns|recovery}`.
 
-- **Image Capture References:** Media assets in sample data use mock relative paths; full image processing relies on local file references or uploaded base64 data.
-- **Rate Limits:** Cloud Vision API calls (Gemini/Claude) require valid API keys set in `.env`; fallback deterministic engines execute locally when offline.
+The React application provides these main views:
 
+| View | Purpose |
+|---|---|
+| Landing and sign-in | Enter the app, log in, or register an organization/account. |
+| Command Center | Tenant-scoped KPI cards, verdict and agent summaries, issue-category resolution rates, lifecycle outcome chart, funnel, and unit ledger. |
+| Stage managers | Search/filter units and run Receiving, Prep, Pack, Returns, or Recovery inspections. |
+| Unit Passports | Inspect one unit's profile, workflow lifecycle, evidence, and stage outcomes. |
+| Review Queue | Inspect unresolved work and record review decisions/overrides. |
+| Claims & Analytics | Browse saved operational and recovery outcomes. |
+| System Health | Review API/agent availability and application settings. |
+
+Dashboard history is based on persisted workflow and evidence records; selecting a date range only filters the displayed history. A workflow run should remain visible after reload because it is saved in the configured database.
+
+## 9. Failure handling and operational limits
+
+- Agent calls use the flow's timeout/retry settings. In HTTP mode the service health endpoints are checked by the API.
+- The orchestrator records stage results and failure state rather than treating a failed call as a successful inspection.
+- `resume` retries a workflow from its pending/error work; an operator may first need to resolve an explicit review or correct the underlying service/input.
+- Sample CSV import is provided by `scripts/import_sample_csv_to_db.py`; `scripts/verify_db.py` reports the configured database engine and records.
+- A populated local SQLite database is a local development/demo artifact, not a shared production database. Use PostgreSQL and an appropriately protected deployment for shared use.
+- The current structured-observation handlers do not provide end-to-end automated image understanding. Model-backed CV/OCR capabilities require implementation, credentials where applicable, and verification in the live manager entry point.
+
+## 10. Running locally
+
+Follow the full setup in [`README.md`](README.md). The two main processes are:
+
+```powershell
+# API
+python -m uvicorn orchestration.api:app --host 127.0.0.1 --port 8100 --reload
+
+# Frontend, in a second terminal
+cd frontend
+npm run dev
+```
+
+For backend integration tests, activate the Python virtual environment and run `python -m pytest`. For the frontend, run `npm run lint` and `npm run build` from `frontend/`.

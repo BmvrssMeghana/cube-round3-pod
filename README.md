@@ -1,136 +1,159 @@
-# Cube Buildathon · Round 3 · Pod Integration Build
+# CUBE Commerce Operations
 
-**Commerce Context stream · Round 3 · Pod build**
+CUBE is a multi-tenant operations platform for tracking a commerce unit from receiving through preparation, packing, returns, and financial recovery. A single unit passport brings together workflow status, stage decisions, review history, source data, and linked evidence.
 
-> Five agents, one unit, one record that follows it. In Round 3 your Pod connects the five Round 2 agents into **one commerce system**.
+The project combines a React/TypeScript operations console, a FastAPI orchestration API, five stage managers, and SQLite or PostgreSQL persistence. The workflow and agent configuration live in `orchestration/` and `agents/`.
 
-**New here? Read [`START-HERE.md`](START-HERE.md) first.** This README is the concise overview; the detailed rules live in the guides.
+## What it does
 
-## Objective
+- **Sign-in and organization setup:** log into Team Alpha or Team Bravo, register into an existing team with its invite code, or create a new organization. Data access is scoped to the signed-in organization.
+- **Unit lifecycle:** create and find units, run individual stage inspections or a full workflow, resume a workflow, and inspect saved results.
+- **Unit passports and evidence ledger:** see the lifecycle timeline, stage checks and verdicts, evidence references, source records, overrides, and the final workflow outcome.
+- **Operations dashboards:** Command Center KPIs, agent performance, stage funnel, issue categories and resolution rates, lifecycle outcomes, and a searchable unit ledger.
+- **Human review:** inspect exceptions, apply an explicitly attributed verdict override, and retain the original stage evidence and override history.
+- **Claims and analytics:** review fee lines, charge positions, linked upstream evidence, claim recommendations, and saved workflow history.
+- **Sample-data import:** load Receiving, Prep, Pack, Returns, and fee-report CSV records into the configured database while preserving source rows for traceability.
+- **Light and dark themes** across the signed-in operations experience.
 
-Integrate the five independently built Round 2 agents into one connected, end-to-end commerce workflow, and show it working. **Integrate → Orchestrate → Test → Deploy → Demonstrate.** Not a rebuild.
+## Workflow
 
-## What the Pod builds
+The default standard flow is configured in [`orchestration/flow.json`](orchestration/flow.json):
+
+1. **Receiving** checks purchase-order identity, carton and unit counts, quantity, damage, quality flags, and variant observations.
+2. **Prep** runs when the unit's route is FBA. It evaluates the applicable category rules, visually-checkable rule inputs, labels, seals, warnings, and measurements.
+3. **Pack** runs for the configured FBA and MFN routes. It reconciles ordered and observed item lines, quantities, extras, and identity evidence before returning a seal decision.
+4. **Returns** runs only when the unit is marked as returned. It checks identity and completeness and maps observed condition to a disposition.
+5. **Recovery** evaluates fee-report lines against available upstream evidence, suppresses duplicate or previously reimbursed lines, and produces a claim recommendation and explanation.
+
+The orchestrator evaluates route and return conditions from the flow file. Skipped stages are recorded as skipped and do not count as unfinished required work.
+
+## Specialist responsibilities
+
+The stage managers are organized into the following specialist workstreams. Their detailed responsibility map is in [`docs/agent-design.md`](docs/agent-design.md); the runtime boundary and implementation status are documented in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+| Stage manager | Specialist workstreams |
+|---|---:|
+| Receiving | 6 |
+| Prep | 6 |
+| Pack | 5 |
+| Returns | 6 |
+| Recovery | 7 |
+| **Total** | **30** |
+
+These are functional responsibilities within five stage managers, **not 30 separately deployed services**. In the currently wired runtime, the orchestrator calls one `handle()` entry point per stage. Those handlers make decisions from structured imported records and operator-provided observations; the CV/OCR workstream labels describe the intended specialist responsibilities and do not mean that a live vision/OCR model is invoked for every check.
+
+## Local setup
+
+Requires Python 3.11 or newer and Node.js/npm. Use two terminals from the repository root.
+
+### 1. Python API
+
+PowerShell:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+Set `AUTH_TOKEN_SECRET` in `.env` to a private random value with at least 32 characters before starting the API. If `DATABASE_URL` is blank, the API uses `data/cube_unified.db` (SQLite). Set it to a PostgreSQL connection string to use PostgreSQL instead.
+
+Optionally import the supplied CSV records into the selected database:
+
+```powershell
+python scripts/import_sample_csv_to_db.py
+python scripts/verify_db.py
+```
+
+Start the API:
+
+```powershell
+python -m uvicorn orchestration.api:app --host 127.0.0.1 --port 8100 --reload
+```
+
+### 2. Frontend
+
+In another terminal:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Open the Vite URL printed in the terminal (normally `http://localhost:5173`). The API health endpoint is `http://127.0.0.1:8100/health`.
+
+### Demo accounts
+
+On a fresh database, the API seeds `org_alpha` / `root` and `org_bravo` / `root`, scoped to Team Alpha and Team Bravo respectively. These are local/demo credentials only: set a strong `AUTH_TOKEN_SECRET`, change or remove the demo accounts before deployment, and do not reuse their passwords. New organizations can be registered through the sign-in flow. Joining an existing team requires its invite code when configured.
+
+## Configuration
+
+Copy `.env.example` to `.env`. Never commit `.env`.
+
+| Variable | Purpose |
+|---|---|
+| `AUTH_TOKEN_SECRET` | Required signing secret for bearer sessions (at least 32 characters). |
+| `DATABASE_URL` | PostgreSQL connection string; blank selects the local SQLite database. |
+| `CUBE_ALPHA_INVITE_CODE`, `CUBE_BRAVO_INVITE_CODE` | Optional invite codes for registration into the corresponding existing team. |
+| `ORCH_FLOW` | Optional path to a workflow flow JSON file. Defaults to the flow selected in `pod.json`. |
+| `ORCH_MODE` | Optional `inproc` or `http` override for stage-agent execution. |
+| `RECEIVING_URL`, `PREP_URL`, `PACK_URL`, `RETURNS_URL`, `RECOVERY_URL` | Agent URLs when the corresponding manifest uses HTTP mode. |
+| `INPUT_DIR`, `DATA_DIR` | Capture directory and sample CSV directory overrides. |
+| `LOG_LEVEL`, `LOG_FORMAT` | API and orchestration logging controls. |
+
+The current agent manifests default to in-process execution. Separate stage HTTP services are available through the agent service entry points when configured; they are not required for the default local setup.
+
+## API overview
+
+Public health, authentication, and API documentation routes:
+
+- `GET /health`, `POST /auth/login`, `POST /auth/register`, `/docs`, `/openapi.json`, `/redoc`
+
+Authenticated API routes include:
+
+- `GET /auth/me`
+- `GET /dashboard/summary`, `/dashboard/activity`, `/dashboard/timeseries`, `/dashboard/locations`, and `/dashboard/agents/{stage}`
+- `GET /workflows`, `POST /workflows`, `GET /workflows/{workflow_id}`, and `GET /workflows/{workflow_id}/evidence`
+- `POST /workflows/{workflow_id}/run`, `/resume`, and `/overrides`
+- `POST /units`
+- `POST /inspect/{receiving|prep|pack|returns|recovery}`
+
+Interactive API documentation is available at `/docs`. Except for health and authentication endpoints, API requests require a bearer token, and organization-scoped data is restricted to the token's organization.
+
+## Tests and checks
+
+From the repository root, with the virtual environment activated:
+
+```powershell
+python -m pytest
+```
+
+Frontend checks:
+
+```powershell
+cd frontend
+npm run lint
+npm run build
+```
+
+## Project map
 
 ```text
-Receiving → Prep → Pack → Returns → Recovery → Final Commerce Outcome
+agents/                  Five stage handlers, manifests, and agent-specific code
+data/sample/              Synthetic CSV source data and sample cases
+data/input/               Per-unit, per-stage capture files
+docs/agent-design.md      Specialist responsibilities by stage manager
+frontend/                 React, TypeScript, and Vite operations console
+orchestration/api.py      Authenticated FastAPI application and HTTP routes
+orchestration/flow.json   Standard conditional stage sequence
+orchestration/orchestrator.py
+                          Workflow execution and stage hand-offs
+orchestration/rollup.py   Workflow status and final-outcome derivation
+orchestration/db.py       SQLite/PostgreSQL persistence and data access
+shared/                   Evidence contracts, record builders, and utilities
+tests/                    Integration and end-to-end tests
 ```
 
-| Member | Agent | Folder |
-|---|---|---|
-| 1 | Receiving Manager | `agents/receiving/` |
-| 2 | Prep Manager | `agents/prep/` |
-| 3 | Pack Manager | `agents/pack/` |
-| 4 | Returns Manager | `agents/returns/` |
-| 5 | Recovery Manager | `agents/recovery/` |
-
-Each member owns one agent. The Pod jointly owns the orchestration, shared contracts, workflow state, integration, end-to-end testing, documentation, demo and submission. **No participant owns the final system alone.**
-
-## Architecture in one picture
-
-```text
-              ┌────────────────────────── Orchestrator (owns workflow state) ───────────────────────────┐
- case ──────▶ │ route · pass previous evidence · validate · record evidence · retry · UNCERTAIN · outcome │ ──▶ Workflow State
-              └────┬─────────┬─────────┬─────────┬─────────┬────────────────────────────────────────────┘      + Final Outcome
-        Agent Input ▼         │         │         │         │  ▲ Agent Output (result + Evidence Record)
-              Receiving     Prep      Pack     Returns   Recovery     ← each: in-process handle()  OR  HTTP /health + /run
-```
-
-- **One contract.** Every agent takes an *Agent Input* and returns an *Agent Output* containing an *Evidence Record*: per-check verdicts (PASS / FAIL / **UNCERTAIN**), confidence, model/version, timestamps, hashes.
-- **One owner of state.** The orchestrator derives workflow status and the final outcome from the evidence chain. Agent outputs inform; they do not set state.
-- **Failures are recorded, never hidden,** and never become success.
-
-Details: [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`INTEGRATION-GUIDE.md`](INTEGRATION-GUIDE.md) · [`ORCHESTRATION-GUIDE.md`](ORCHESTRATION-GUIDE.md).
-
-## Quick setup and how to run
-
-Requires Python 3.11+.
-
-```sh
-make setup            # venv + dependencies + .env
-make test             # integration, end-to-end, failure, UNCERTAIN, override and HTTP tests
-make run              # all sample workflows end to end -> out/workflows/*.json and out/evidence/*.json
-make case UNIT=UNIT-0014 ORG=org_demo_alpha     # one workflow, in full
-make serve            # orchestrator API on :8100 (POST /workflows, GET /workflows/{id}, GET /health)
-python scripts/import_sample_csv_to_db.py       # import all supplied sample CSV rows into configured SQL
-python scripts/verify_db.py                     # report engine and source/unit/workflow counts
-```
-
-The website's API stores workflow state and evidence in the configured SQL database. Set `DATABASE_URL` to your PostgreSQL connection string before importing or starting the API; with no PostgreSQL URL configured, the app uses `data/cube_unified.db` (SQLite). The import is safe to rerun and preserves organization scope and source CSV rows for review traceability. The CLI command `make run` remains a separate file-based stub workflow runner.
-
-The web app requires an account. Set `AUTH_TOKEN_SECRET` in `.env` to a unique random value of at least 32 characters before starting the API (for example, generate one with `python -c "import secrets; print(secrets.token_urlsafe(48))"`). For local/demo use, the API creates `org_alpha` / `root` and `org_bravo` / `root` accounts once if they do not already exist; change or remove these accounts before production deployment. Both demo logins are scoped to their existing Team Alpha/Bravo data organizations. Additional users may join Alpha/Bravo when private invite codes are configured with `CUBE_ALPHA_INVITE_CODE` or `CUBE_BRAVO_INVITE_CODE`, or create a new organization. The selected organization is bound to the account and enforced by the API; it cannot be switched in the command center.
-
-Dashboard execution history is read from saved evidence records, so rerunning a stage adds a history entry instead of replacing earlier results. The Command Center and agent dashboards default to **All Time**; date filters can narrow the view.
-
-Out of the box everything runs on **organiser stub agents** in-process, replaying the synthetic Round 2 CSVs. The agent manifests default to `inproc`; set `ORCH_MODE=http` (and start each agent service) to call them over HTTP. **Replacing a stub with your real agent is your job.**
-
-Run an agent as its own service:
-
-```sh
-.venv/bin/uvicorn agents.prep.app:app --port 8102
-curl localhost:8102/health          # then set "mode": "http" in agents/prep/agent.json
-```
-
-## Where participants put their agents
-
-`agents/<stage>/` (`app.py` exposes `handle()`; `agent.json` describes your agent). Shared areas need Pod-level coordination: `orchestration/`, `shared/`, `tests/`, `docs/`. See [`PARTICIPANT-GUIDE.md`](PARTICIPANT-GUIDE.md).
-
-## How the agents connect
-
-Through the orchestrator only. It sends each agent an Agent Input (subject, this stage's captures, **all previous evidence**, overrides), validates and stores the Agent Output's evidence, updates workflow state, and decides what runs next. See [`INTEGRATION-GUIDE.md`](INTEGRATION-GUIDE.md).
-
-## Required environment variables
-
-Copy `.env.example` to `.env`. **Never commit `.env`.**
-
-| Variable | Purpose | Default |
-|---|---|---|
-| `ORCH_MODE` | Force `inproc` or `http` for all agents | each `agent.json` |
-| `ORCH_FLOW` | Flow file for the API | the flow in `pod.json` |
-| `<STAGE>_URL` | Where an `http`-mode agent listens (`PREP_URL`, …) | `agent.json` `url` |
-| `DATABASE_URL` / `POSTGRES_URL` | PostgreSQL connection string for API state, evidence, and CSV imports | local SQLite database |
-| `AUTH_TOKEN_SECRET` | Signing key for account bearer tokens; required and at least 32 characters | none |
-| `CUBE_ALPHA_INVITE_CODE`, `CUBE_BRAVO_INVITE_CODE` | Private codes required to register into Team Alpha/Bravo | registration into that team disabled |
-| `OUT_DIR` | Where the separate file-based CLI runner writes workflow state and evidence | `out` |
-| `DATA_DIR`, `INPUT_DIR` | Sample CSVs for the stubs; your per-stage captures | `data/sample`, `data/input` |
-| `LOG_LEVEL`, `LOG_FORMAT` | Logging | `WARNING`, `json` |
-| Model provider keys | Whatever *your* agents use (e.g. `ANTHROPIC_API_KEY`) | none |
-
-## Example end-to-end workflow
-
-`UNIT-0014` (FBA, returned). Full files in [`examples/end-to-end/`](examples/end-to-end/).
-
-```text
-Receiving  RCV-0014  accept          PASS   ─┐
-Prep       PRP-0014  compliant       PASS    │  every record is stored and handed forward as previous_evidence
-Pack       skipped (route = fba: Amazon packs it)
-Returns    RTN-0014  liquidate       PASS   ─┤
-Recovery   RCY-UNIT-0014  claim_recommended  FAIL ◀─┘
-             • inbound_defect_fee  $2.00  CONTRADICTS  <- cites PRP-0014 (Prep says compliant)
-             • weight-tier fee     $4.75  SILENT       <- no measured weight upstream; NOT claimed
-Workflow status COMPLETED · Final outcome CLAIM_RECOMMENDED ($2.00, evidence attached)
-```
-
-(The stubs' claim rules are illustrative; your Recovery agent decides for real.) Also see [`examples/happy-path/`](examples/happy-path/), [`examples/uncertain-path/`](examples/uncertain-path/), [`examples/failure-path/`](examples/failure-path/).
-
-## Repository structure
-
-```text
-START-HERE.md  README.md  PARTICIPANT-GUIDE.md  GITHUB-GUIDE.md  RULES.md  FAQ.md
-ARCHITECTURE.md  INTEGRATION-GUIDE.md  EVIDENCE-CONTRACT.md  ORCHESTRATION-GUIDE.md
-ROUND3-RUBRIC.md  SUBMISSION-GUIDE.md  DEMO-GUIDE.md  pod.json  .env.example
-agents/{receiving,prep,pack,returns,recovery}/   app.py · agent.json · README.md
-orchestration/       flow.json · orchestrator.py · rollup.py · store.py · clients.py · run.py (CLI) · api.py
-shared/schemas/      agent-input · agent-output · evidence · workflow-state · final-outcome · error
-shared/contracts/    agent-api.md        shared/utils/   hashing · schema validation · record builders · logging · server
-data/input/ (yours) · data/sample/ (Round 2 synthetic CSVs) · data/expected/ (golden outcomes for the stubs)
-examples/{happy-path,uncertain-path,failure-path,end-to-end}/      tests/{integration,e2e}/      docs/{build-log,decisions}.md
-```
-
-## Submission overview
-
-Your Pod's final repository (tagged), a working integrated system, documentation and architecture, a demo, a deployment URL if applicable, evaluation and testing evidence, and the LinkedIn post URL. The literal checklist, the process and the finality rules are in [`SUBMISSION-GUIDE.md`](SUBMISSION-GUIDE.md). Dates and the submission form are **TBA**.
-
----
-
-*CUBE Buildathon · Commerce Context · Round 3*
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for component boundaries, evidence flow, persistence, routing, and current runtime limitations.
