@@ -328,8 +328,13 @@ def create_unit(body: dict, request: Request) -> dict:
         "sku": sku.strip(),
         "expected_qty": expected_qty,
         "expected_cartons": body.get("expected_cartons", 1),
-        **{k: v for k, v in body.items() if k not in ("org_id", "unit_id", "subject_id")},
+        **{k: v for k, v in body.items() if k not in ("org_id", "unit_id", "subject_id", "captures")},
     }
+    if body.get("captures"):
+        try:
+            _persist_captures(subject, "receiving", body["captures"])
+        except Exception as exc:
+            logger.warning("Could not persist initial unit captures: %s", exc)
     flow = load_flow(FLOW)
     wf = STORE.load_workflow(workflow_id_for(case)) or new_workflow(case, flow)
     _reconcile_workflow_routing(wf, flow)
@@ -451,6 +456,185 @@ def override(workflow_id: str, body: dict, request: Request) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Vision Analysis Endpoint — AI-assisted photo extraction
+# ---------------------------------------------------------------------------
+
+@app.post("/vision/analyze")
+def vision_analyze(body: dict, request: Request) -> dict:
+    """
+    Analyze uploaded images with OpenAI GPT-4o Vision or xAI Grok Vision and extract structured fields.
+    The stage parameter determines which fields to extract.
+    Returns extracted fields (never auto-verified) for user review.
+    """
+    _authorized_org(request)
+    import json as _json
+
+    stage = str(body.get("stage", "receiving")).lower()
+    captures = body.get("captures", [])
+    if not captures:
+        return {"stage": stage, "extracted": {}, "confidence": "none", "note": "No images provided"}
+
+    provider = str(body.get("provider", "auto")).lower()
+
+    # Model provider credentials
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    grok_key = os.environ.get("GROK_API_KEY") or os.environ.get("XAI_API_KEY", "")
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+
+    # Build vision messages from captures (first 4 max)
+    messages_content: list = [
+        {
+            "type": "text",
+            "text": _vision_prompt_for(stage),
+        }
+    ]
+    for cap in captures[:4]:
+        data = cap.get("content_base64", "")
+        if not data:
+            continue
+        mime = "image/jpeg"
+        fn = str(cap.get("filename", "")).lower()
+        if fn.endswith(".png"):
+            mime = "image/png"
+        elif fn.endswith(".webp"):
+            mime = "image/webp"
+        messages_content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:{mime};base64,{data}", "detail": "low"},
+        })
+
+    import urllib.request as _req
+    import urllib.error as _uerr
+
+    def _call_provider(endpoint: str, api_token: str, model_name: str) -> dict:
+        payload_bytes = _json.dumps({
+            "model": model_name,
+            "max_tokens": 512,
+            "messages": [{"role": "user", "content": messages_content}],
+            "response_format": {"type": "json_object"},
+        }).encode()
+        http_req = _req.Request(
+            endpoint,
+            data=payload_bytes,
+            headers={
+                "Authorization": f"Bearer {api_token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with _req.urlopen(http_req, timeout=25) as resp:
+            resp_data = _json.loads(resp.read())
+        raw_text = resp_data["choices"][0]["message"]["content"]
+        try:
+            return _json.loads(raw_text)
+        except Exception:
+            return {"raw": raw_text}
+
+    # Configure candidate providers based on preference & keys
+    candidates = []
+    if provider == "grok":
+        if grok_key:
+            candidates.append(("grok", "https://api.x.ai/v1/chat/completions", grok_key, "grok-2-vision-1212"))
+        elif groq_key:
+            candidates.append(("groq", "https://api.groq.com/openai/v1/chat/completions", groq_key, "llama-3.2-11b-vision-preview"))
+        if openai_key:
+            candidates.append(("openai", "https://api.openai.com/v1/chat/completions", openai_key, "gpt-4o-mini"))
+    elif provider == "openai":
+        if openai_key:
+            candidates.append(("openai", "https://api.openai.com/v1/chat/completions", openai_key, "gpt-4o-mini"))
+        if grok_key:
+            candidates.append(("grok", "https://api.x.ai/v1/chat/completions", grok_key, "grok-2-vision-1212"))
+        elif groq_key:
+            candidates.append(("groq", "https://api.groq.com/openai/v1/chat/completions", groq_key, "llama-3.2-11b-vision-preview"))
+    else:  # auto
+        if openai_key:
+            candidates.append(("openai", "https://api.openai.com/v1/chat/completions", openai_key, "gpt-4o-mini"))
+        if grok_key:
+            candidates.append(("grok", "https://api.x.ai/v1/chat/completions", grok_key, "grok-2-vision-1212"))
+        elif groq_key:
+            candidates.append(("groq", "https://api.groq.com/openai/v1/chat/completions", groq_key, "llama-3.2-11b-vision-preview"))
+
+    if not candidates:
+        return {
+            "stage": stage,
+            "provider_used": "none",
+            "model_used": "none",
+            "extracted": {},
+            "confidence": "none",
+            "note": "Vision API credentials (OPENAI_API_KEY / GROK_API_KEY) not configured. Enter inspection values manually.",
+        }
+
+    errors = []
+    for prov_name, endpoint, key, model in candidates:
+        try:
+            extracted = _call_provider(endpoint, key, model)
+            return {
+                "stage": stage,
+                "provider_used": prov_name,
+                "model_used": model,
+                "extracted": extracted,
+                "confidence": "ai_assisted",
+                "note": f"AI extraction via {prov_name.upper()} ({model}). Review and adjust all values before running inspection.",
+            }
+        except Exception as exc:
+            logger.warning("Vision provider %s failed: %s", prov_name, exc)
+            errors.append(f"{prov_name}: {type(exc).__name__}")
+
+    return {
+        "stage": stage,
+        "provider_used": "failed",
+        "model_used": "none",
+        "extracted": {},
+        "confidence": "error",
+        "note": f"Vision analysis unavailable ({', '.join(errors)}). Manual inspection entry available below.",
+    }
+
+
+def _vision_prompt_for(stage: str) -> str:
+    prompts = {
+        "receiving": (
+            "You are a warehouse receiving inspector AI. Analyze these images and extract structured JSON with these keys "
+            "(use null for uncertain/unreadable values): "
+            "{\"sku\": string|null, \"observed_qty\": number|null, \"observed_variant\": string|null, "
+            "\"carton_damage\": \"none\"|\"crushing\"|\"water\"|\"tears\"|\"uncertain\"|null, "
+            "\"unit_damage\": \"none\"|\"crushing\"|\"water\"|\"tears\"|\"uncertain\"|null, "
+            "\"identity_match\": \"yes\"|\"no\"|\"uncertain\"|null, "
+            "\"notes\": string}. "
+            "Only report what is clearly visible. Never invent values."
+        ),
+        "prep": (
+            "You are a prep compliance inspector AI. Analyze these images and extract structured JSON: "
+            "{\"polybag_present_sealed\": \"yes\"|\"no\"|\"uncertain\"|null, "
+            "\"suffocation_warning\": \"legible\"|\"missing\"|\"obscured\"|\"uncertain\"|null, "
+            "\"fnsku_label_placement\": \"flat\"|\"wrinkled\"|\"missing\"|\"uncertain\"|null, "
+            "\"original_barcode_covered\": \"yes\"|\"no\"|\"uncertain\"|null, "
+            "\"handling_marks\": \"all_present\"|\"partial\"|\"missing\"|\"uncertain\"|null, "
+            "\"notes\": string}. Only report what is clearly visible."
+        ),
+        "pack": (
+            "You are a pack verification inspector AI. Analyze these images and extract structured JSON: "
+            "{\"observed_items\": string|null, \"packaging_sealed\": \"yes\"|\"no\"|\"uncertain\"|null, "
+            "\"look_alike_risk\": boolean|null, \"notes\": string}. "
+            "List observable items as 'SKU:qty' comma separated. Only report what is clearly visible."
+        ),
+        "returns": (
+            "You are a returns inspection AI. Analyze these images and extract structured JSON: "
+            "{\"condition_grade\": \"new\"|\"like_new\"|\"good\"|\"fair\"|\"poor\"|\"damaged\"|\"uncertain\"|null, "
+            "\"visible_damage\": string|null, \"accessories_present\": \"all\"|\"partial\"|\"none\"|\"uncertain\"|null, "
+            "\"original_packaging\": \"intact\"|\"damaged\"|\"missing\"|\"uncertain\"|null, "
+            "\"notes\": string}. Only report what is clearly visible."
+        ),
+        "recovery": (
+            "You are a recovery evidence reviewer AI. Analyze these images/documents and extract structured JSON: "
+            "{\"document_type\": string|null, \"fee_amount\": number|null, \"fee_type\": string|null, "
+            "\"unit_id\": string|null, \"asin\": string|null, \"notes\": string}. "
+            "Only report what is clearly legible."
+        ),
+    }
+    return prompts.get(stage, prompts["receiving"])
+
+
+# ---------------------------------------------------------------------------
 # Live Interactive Agent Inspection Endpoints
 # ---------------------------------------------------------------------------
 
@@ -481,9 +665,12 @@ def _persist_captures(unit_id: str, stage: str, captures: object) -> list[dict]:
 
         extension = Path(name).suffix.lower()
         if stage == "recovery":
-            if extension != ".csv":
-                raise HTTPException(422, "Recovery reports must be CSV files")
-            kind, safe_suffix = "document", ".csv"
+            if extension == ".csv":
+                kind, safe_suffix = "document", ".csv"
+            elif extension in {".jpg", ".jpeg", ".png", ".webp"}:
+                kind, safe_suffix = "image", extension
+            else:
+                raise HTTPException(422, "Recovery accepts CSV fee reports or image evidence (.jpg, .png, .webp)")
         else:
             if extension not in {".jpg", ".jpeg", ".png", ".webp"}:
                 raise HTTPException(422, f"Unsupported image type for {name!r}")

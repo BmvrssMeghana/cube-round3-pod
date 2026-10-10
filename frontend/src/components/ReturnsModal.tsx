@@ -20,6 +20,19 @@ export const ReturnsModal: React.FC<ReturnsModalProps> = ({ unitId, onClose, onR
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
 
+  // Auto-fill from AI extraction — user can review and correct all values
+  const handleAiExtracted = (extracted: Record<string, any>) => {
+    // Map condition_grade to observedState values
+    const gradeMap: Record<string, string> = {
+      new: 'factory_sealed', like_new: 'opened_good', good: 'opened_good',
+      fair: 'damaged_box', poor: 'item_damaged', damaged: 'item_damaged',
+    };
+    if (extracted.condition_grade && gradeMap[extracted.condition_grade]) {
+      setObservedState(gradeMap[extracted.condition_grade]);
+    }
+    if (extracted.accessories_present === 'none') setMissingParts(partsList);
+  };
+
   const handleRun = async () => {
     setLoading(true);
     const partsListParsed = missingParts.split(',').map((p) => p.trim()).filter(Boolean);
@@ -139,6 +152,8 @@ export const ReturnsModal: React.FC<ReturnsModalProps> = ({ unitId, onClose, onR
           requiredShots={['Returned item', 'Each accessory', 'Packaging condition', 'Serial / product label']}
           value={captures}
           onChange={setCaptures}
+          stage="returns"
+          onAiExtracted={handleAiExtracted}
         />
 
         {error && <p className="font-poppins text-xs text-brand-crimson">{error}</p>}

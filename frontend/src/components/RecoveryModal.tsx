@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { encodeCapture } from './captureEncoding';
+import { CaptureChecklist } from './CaptureChecklist';
 import type { CaptureAttachment } from './CaptureChecklist';
 
 interface RecoveryModalProps {
@@ -18,6 +19,18 @@ export const RecoveryModal: React.FC<RecoveryModalProps> = ({ unitId, onClose, o
   const [priorReimbursementIds, setPriorReimbursementIds] = useState('');
   const [captures, setCaptures] = useState<CaptureAttachment[]>([]);
   const [error, setError] = useState('');
+
+  // Auto-fill from AI extraction — user can review and correct all values
+  const handleAiExtracted = (extracted: Record<string, any>) => {
+    if (typeof extracted.fee_amount === 'number') setAmountUSD(extracted.fee_amount);
+    if (extracted.fee_type) {
+      const ft = String(extracted.fee_type).toLowerCase();
+      if (ft.includes('defect')) setChargeType('inbound_defect_fee');
+      else if (ft.includes('lost')) setChargeType('lost_inbound');
+      else if (ft.includes('damaged') || ft.includes('warehouse')) setChargeType('damaged_in_warehouse');
+      else if (ft.includes('return') || ft.includes('refund')) setChargeType('refund_issued_item_not_returned');
+    }
+  };
 
   const handleRun = async () => {
     setLoading(true);
@@ -152,6 +165,14 @@ export const RecoveryModal: React.FC<RecoveryModalProps> = ({ unitId, onClose, o
             />
           </div>
         </div>
+
+        <CaptureChecklist
+          requiredShots={['Fee / Invoice screenshot', 'Carrier receipt / Proof of delivery', 'Physical condition evidence']}
+          value={captures}
+          onChange={setCaptures}
+          stage="recovery"
+          onAiExtracted={handleAiExtracted}
+        />
 
         {error && <p className="font-poppins text-xs text-brand-crimson">{error}</p>}
 

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { X, Package, Play } from 'lucide-react';
+import { CaptureChecklist } from './CaptureChecklist';
+import type { CaptureAttachment } from './CaptureChecklist';
 
 interface NewUnitModalProps {
   onClose: () => void;
@@ -12,6 +14,7 @@ interface NewUnitModalProps {
     variant: string,
     fnsku: string,
     orderId: string,
+    captures?: CaptureAttachment[],
   ) => Promise<void>;
 }
 
@@ -48,8 +51,16 @@ export const NewUnitModal: React.FC<NewUnitModalProps> = ({ onClose, onCreateUni
   const [orderId, setOrderId] = useState('');
   const [route, setRoute] = useState('fba');
   const [returned, setReturned] = useState(false);
+  const [captures, setCaptures] = useState<CaptureAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleAiExtracted = (extracted: Record<string, any>) => {
+    if (extracted.sku && extracted.sku !== 'unknown') setSku(extracted.sku);
+    if (typeof extracted.observed_qty === 'number') setExpectedQty(extracted.observed_qty);
+    if (extracted.observed_variant && extracted.observed_variant !== 'unknown') setVariant(extracted.observed_variant);
+    if (extracted.fnsku && extracted.fnsku !== 'unknown') setFnsku(extracted.fnsku);
+  };
 
   const focus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     e.target.style.borderColor = '#2563EB';
@@ -64,7 +75,7 @@ export const NewUnitModal: React.FC<NewUnitModalProps> = ({ onClose, onCreateUni
     setLoading(true);
     setError('');
     try {
-      await onCreateUnit(unitId, route, returned, sku, expectedQty, variant, fnsku, orderId);
+      await onCreateUnit(unitId, route, returned, sku, expectedQty, variant, fnsku, orderId, captures);
       onClose();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'Could not create this unit workflow.');
@@ -75,11 +86,11 @@ export const NewUnitModal: React.FC<NewUnitModalProps> = ({ onClose, onCreateUni
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
       style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}
     >
       <div
-        className="w-full max-w-lg rounded-2xl p-6 space-y-5 slide-up"
+        className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 space-y-5 slide-up"
         style={{ background: '#131822', border: '1px solid #2A3F60', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}
       >
         {/* Header */}
@@ -209,6 +220,14 @@ export const NewUnitModal: React.FC<NewUnitModalProps> = ({ onClose, onCreateUni
               </select>
             </Field>
           </div>
+
+          <CaptureChecklist
+            requiredShots={['Product front', 'Catalog barcode / SKU label']}
+            value={captures}
+            onChange={setCaptures}
+            stage="receiving"
+            onAiExtracted={handleAiExtracted}
+          />
 
           {error && (
             <p className="font-poppins text-red-400" style={{ fontSize: 12 }}>{error}</p>

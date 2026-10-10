@@ -33,14 +33,5 @@
       "src": "/(.*)",
       "dest": "/frontend/dist/index.html"
     }
-  ],
-  "env": {
-    "ORCH_MODE": "inproc",
-    "LOG_LEVEL": "INFO",
-    "LOG_FORMAT": "json",
-    "AUTH_TOKEN_SECRET": "@auth_token_secret",
-    "DATABASE_URL": "@database_url",
-    "GEMINI_API_KEY": "@gemini_api_key",
-    "OPENAI_API_KEY": "@openai_api_key"
-  }
+  ]
 }

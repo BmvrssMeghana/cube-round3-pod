@@ -215,6 +215,7 @@ export default function App() {
     variant: string,
     fnsku: string,
     orderId: string,
+    captures?: any[],
   ) => {
     const workflow = await createUnit({
       unit_id: unitId.trim(),
@@ -226,6 +227,7 @@ export default function App() {
       variant,
       fnsku,
       order_id: orderId,
+      captures,
     });
     setWorkflows((prev) => [workflow, ...prev.filter((item) => item.subject_id !== unitId)]);
     setDashboardRefreshToken((token) => token + 1);

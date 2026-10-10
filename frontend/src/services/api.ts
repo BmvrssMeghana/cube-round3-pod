@@ -213,6 +213,7 @@ export async function createUnit(input: {
   variant?: string;
   fnsku?: string;
   order_id?: string;
+  captures?: any[];
 }): Promise<WorkflowState> {
   return postJson<WorkflowState>('/units', input);
 }
@@ -250,3 +251,21 @@ export async function runWorkflow(unitId: string, orgId: string): Promise<Workfl
 }
 
 export { submitOverride as applyOverride };
+
+export interface VisionAnalysisResult {
+  stage: string;
+  provider_used?: string;
+  model_used?: string;
+  extracted: Record<string, any>;
+  confidence: 'ai_assisted' | 'none' | 'error';
+  note: string;
+}
+
+export async function analyzeImages(
+  stage: string,
+  captures: Array<{ shot: string; filename: string; content_base64: string }>,
+  provider: string = 'auto',
+): Promise<VisionAnalysisResult> {
+  return postJson<VisionAnalysisResult>('/vision/analyze', { stage, captures, provider });
+}
+

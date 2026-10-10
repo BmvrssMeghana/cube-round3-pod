@@ -27,6 +27,16 @@ export const ReceivingModal: React.FC<ReceivingModalProps> = ({ unitId, onClose,
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
 
+  // Auto-fill from AI extraction — user can review and correct all values
+  const handleAiExtracted = (extracted: Record<string, any>) => {
+    if (extracted.sku && extracted.sku !== 'unknown') setSku(extracted.sku);
+    if (typeof extracted.observed_qty === 'number') setObservedQty(extracted.observed_qty);
+    if (extracted.observed_variant && extracted.observed_variant !== 'unknown') setObservedVariant(extracted.observed_variant);
+    if (extracted.carton_damage) setDamage(extracted.carton_damage);
+    if (extracted.unit_damage) setUnitDamage(extracted.unit_damage);
+    if (extracted.identity_match) setIdentityMatch(extracted.identity_match);
+  };
+
   const handleRun = async () => {
     setLoading(true);
     const payload = {
@@ -232,6 +242,8 @@ export const ReceivingModal: React.FC<ReceivingModalProps> = ({ unitId, onClose,
           requiredShots={['Carton exterior', 'PO / SKU label', 'Product and variant', 'Damage close-up']}
           value={captures}
           onChange={setCaptures}
+          stage="receiving"
+          onAiExtracted={handleAiExtracted}
         />
 
         {error && <p className="font-poppins text-xs text-brand-crimson">{error}</p>}

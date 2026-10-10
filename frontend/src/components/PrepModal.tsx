@@ -24,6 +24,15 @@ export const PrepModal: React.FC<PrepModalProps> = ({ unitId, onClose, onRunInsp
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
 
+  // Auto-fill from AI extraction — user can review and correct all values
+  const handleAiExtracted = (extracted: Record<string, any>) => {
+    if (extracted.polybag_present_sealed) setPolybagSealed(extracted.polybag_present_sealed);
+    if (extracted.suffocation_warning) setSuffocationWarning(extracted.suffocation_warning);
+    if (extracted.fnsku_label_placement) setFnskuPlacement(extracted.fnsku_label_placement);
+    if (extracted.original_barcode_covered) setBarcodeCovered(extracted.original_barcode_covered);
+    if (extracted.handling_marks) setHandlingMarks(extracted.handling_marks);
+  };
+
   const handleRun = async () => {
     setLoading(true);
     const payload = {
@@ -201,6 +210,8 @@ export const PrepModal: React.FC<PrepModalProps> = ({ unitId, onClose, onRunInsp
           requiredShots={['Product front', 'FNSKU label', 'Warning label', 'Seal edge', 'Expiry date', 'Handling marks']}
           value={captures}
           onChange={setCaptures}
+          stage="prep"
+          onAiExtracted={handleAiExtracted}
         />
 
         {error && <p className="font-poppins text-xs text-brand-crimson">{error}</p>}

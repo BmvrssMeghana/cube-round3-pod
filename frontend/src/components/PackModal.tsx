@@ -18,6 +18,12 @@ export const PackModal: React.FC<PackModalProps> = ({ unitId, onClose, onRunInsp
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
 
+  // Auto-fill from AI extraction — user can review and correct all values
+  const handleAiExtracted = (extracted: Record<string, any>) => {
+    if (extracted.observed_items) setObservedItems(extracted.observed_items);
+    if (typeof extracted.look_alike_risk === 'boolean') setLookAlike(extracted.look_alike_risk);
+  };
+
   const handleRun = async () => {
     setLoading(true);
     const payload = {
@@ -115,6 +121,8 @@ export const PackModal: React.FC<PackModalProps> = ({ unitId, onClose, onRunInsp
           requiredShots={['Top-down open-box contents']}
           value={captures}
           onChange={setCaptures}
+          stage="pack"
+          onAiExtracted={handleAiExtracted}
         />
 
         {error && <p className="font-poppins text-xs text-brand-crimson">{error}</p>}

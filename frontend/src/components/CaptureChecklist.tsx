@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { encodeCapture } from './captureEncoding';
 import { getSampleCapture, getAllSampleCaptures } from '../data/sampleCaptures';
+import { analyzeImages } from '../services/api';
+import type { VisionAnalysisResult } from '../services/api';
 
 export interface CaptureAttachment {
   shot: string;
@@ -14,6 +16,10 @@ interface CaptureChecklistProps {
   value: CaptureAttachment[];
   onChange: (attachments: CaptureAttachment[]) => void;
   accept?: string;
+  /** Stage name for AI extraction prompt */
+  stage?: string;
+  /** Called when AI extraction returns results, for auto-fill */
+  onAiExtracted?: (extracted: Record<string, any>) => void;
 }
 
 export const CaptureChecklist: React.FC<CaptureChecklistProps> = ({
@@ -21,8 +27,13 @@ export const CaptureChecklist: React.FC<CaptureChecklistProps> = ({
   value,
   onChange,
   accept = 'image/jpeg,image/png,image/webp',
+  stage = 'receiving',
+  onAiExtracted,
 }) => {
   const [error, setError] = useState('');
+  const [aiResult, setAiResult] = useState<VisionAnalysisResult | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'auto' | 'openai' | 'grok'>('auto');
 
   const attach = async (shot: string, file?: File) => {
     setError('');
@@ -53,6 +64,27 @@ export const CaptureChecklist: React.FC<CaptureChecklistProps> = ({
     })));
   };
 
+  const handleAnalyzeWithAI = async () => {
+    if (value.length === 0) {
+      setError('Attach at least one image before analyzing.');
+      return;
+    }
+    setAnalyzing(true);
+    setError('');
+    setAiResult(null);
+    try {
+      const result = await analyzeImages(stage, value, selectedProvider);
+      setAiResult(result);
+      if (result.extracted && Object.keys(result.extracted).length > 0 && onAiExtracted) {
+        onAiExtracted(result.extracted);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI analysis failed.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   return (
     <section className="p-4 rounded-2xl bg-brand-surface border border-brand-border space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -64,13 +96,46 @@ export const CaptureChecklist: React.FC<CaptureChecklistProps> = ({
             Real warehouse inspection shots for agent evaluation. Evidence records hash each capture into the immutable ledger.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleAttachAllSamplePhotos}
-          className="self-start sm:self-auto px-3 py-1.5 rounded-xl text-xs font-poppins font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md transition-all flex items-center gap-1.5"
-        >
-          ⚡ Attach All Sample Photos ({requiredShots.length})
-        </button>
+        <div className="flex gap-2 flex-wrap items-center self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleAttachAllSamplePhotos}
+            className="px-3 py-1.5 rounded-xl text-xs font-poppins font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md transition-all flex items-center gap-1.5"
+          >
+            ⚡ Attach All Sample Photos ({requiredShots.length})
+          </button>
+          <select
+            aria-label="Vision Model Provider"
+            value={selectedProvider}
+            onChange={(e) => setSelectedProvider(e.target.value as 'auto' | 'openai' | 'grok')}
+            className="px-2.5 py-1.5 rounded-xl text-xs font-poppins font-bold bg-neutral-900 border border-purple-500/40 text-purple-200 focus:outline-none focus:border-purple-400 cursor-pointer"
+          >
+            <option value="auto">⚡ Auto (Best Model)</option>
+            <option value="openai">🤖 OpenAI (GPT-4o)</option>
+            <option value="grok">🚀 Grok (xAI Vision)</option>
+          </select>
+          <button
+            type="button"
+            onClick={handleAnalyzeWithAI}
+            disabled={analyzing || value.length === 0}
+            className={`px-3 py-1.5 rounded-xl text-xs font-poppins font-bold transition-all flex items-center gap-1.5 ${
+              analyzing
+                ? 'bg-purple-600/50 text-purple-300 cursor-wait'
+                : value.length === 0
+                ? 'bg-purple-600/20 text-purple-400/50 cursor-not-allowed'
+                : 'bg-purple-600 hover:bg-purple-500 text-white shadow-md'
+            }`}
+            title={value.length === 0 ? 'Attach images first' : 'Extract fields with Vision AI'}
+          >
+            {analyzing ? (
+              <>
+                <span className="animate-spin">⟳</span> Analyzing…
+              </>
+            ) : (
+              <>🤖 Analyze with AI</>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -100,6 +165,7 @@ export const CaptureChecklist: React.FC<CaptureChecklistProps> = ({
                 <input
                   type="file"
                   accept={accept}
+                  capture="environment"
                   className="block w-full text-[11px] font-poppins text-[var(--text-secondary)] file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
                   onChange={(event: ChangeEvent<HTMLInputElement>) => {
                     void attach(shot, event.currentTarget.files?.[0]);
@@ -137,7 +203,7 @@ export const CaptureChecklist: React.FC<CaptureChecklistProps> = ({
                       {captured.filename}
                     </span>
                     <span className="text-[10px] text-brand-muted block">
-                      Image attached & ready for vision evaluation
+                      Image attached &amp; ready for vision evaluation
                     </span>
                   </div>
                   <button
@@ -153,6 +219,46 @@ export const CaptureChecklist: React.FC<CaptureChecklistProps> = ({
           );
         })}
       </div>
+
+      {/* AI Extraction Results */}
+      {aiResult && (
+        <div className={`p-3 rounded-xl border text-xs font-poppins space-y-2 ${
+          aiResult.confidence === 'ai_assisted'
+            ? 'bg-purple-900/20 border-purple-500/40'
+            : 'bg-brand-card border-brand-border'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-purple-400 uppercase tracking-wider text-[10px]">
+              🤖 AI Vision Extraction {aiResult.provider_used && aiResult.provider_used !== 'none' ? `[${aiResult.provider_used.toUpperCase()}: ${aiResult.model_used}]` : ''} — {aiResult.confidence === 'ai_assisted' ? 'Fields auto-filled below ↓' : 'Review status'}
+            </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+              aiResult.confidence === 'ai_assisted'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                : 'bg-brand-surface text-brand-muted border border-brand-border'
+            }`}>
+              {aiResult.confidence}
+            </span>
+          </div>
+          <p className="text-brand-muted text-[10px]">{aiResult.note}</p>
+          {Object.entries(aiResult.extracted).length > 0 && (
+            <div className="grid grid-cols-2 gap-1.5 pt-1">
+              {Object.entries(aiResult.extracted).map(([k, v]) => (
+                v !== null && v !== undefined && k !== 'notes' && (
+                  <div key={k} className="flex items-center gap-1.5">
+                    <span className="text-brand-muted capitalize">{k.replace(/_/g, ' ')}:</span>
+                    <span className="text-[var(--text-primary)] font-semibold truncate">{String(v)}</span>
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+          {aiResult.extracted?.notes && (
+            <p className="text-[10px] text-brand-muted italic pt-1 border-t border-brand-border/60">
+              Note: {aiResult.extracted.notes}
+            </p>
+          )}
+        </div>
+      )}
 
       {error && <p className="font-poppins text-xs text-brand-crimson">{error}</p>}
     </section>
