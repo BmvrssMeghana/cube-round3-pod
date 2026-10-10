@@ -17,7 +17,7 @@ const AGENTS = [
     code: 'RCV',
     name: 'Receiving',
     detail: 'Inbound verification',
-    description: 'Establish the unit's identity and record evidence captured at intake.',
+    description: "Establish the unit's identity and record evidence captured at intake.",
     page: 'receiving',
     color: '#3b82f6',
     gradient: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.03) 100%)',
