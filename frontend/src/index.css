@@ -845,3 +845,18 @@ html[data-theme="light"] #root .landing-page [class*="hover:bg-[#11151D]"]:hover
 #root [class*="hover:text-amber-"]:hover {
   color: var(--accent-strong) !important;
 }
+
+/* ── Light theme: landing page inline-style overrides ─────────────────────── */
+/* The new LandingPage uses pure inline styles (no Tailwind). In light theme,   */
+/* swap the hardcoded dark hex values for CSS variable equivalents.              */
+
+html[data-theme="light"] .landing-page-root {
+  background: linear-gradient(135deg, #f5f8fc 0%, #eef3fb 100%) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="light"] .landing-page-root [style*="#07090f"],
+html[data-theme="light"] .landing-page-root [style*="rgba(7,9,15"] {
+  background: var(--bg-base) !important;
+}
+
