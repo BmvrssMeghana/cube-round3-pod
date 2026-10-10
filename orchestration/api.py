@@ -119,16 +119,14 @@ def health() -> dict:
         try:
             client = client_for(stage)
             if isinstance(client, HttpClient):
-                # Fast check with short 0.1s timeout
                 try:
-                    res = client.client.get(f"{client.base_url}/health", timeout=0.1)
-                    agents[stage] = res.json() if res.status_code == 200 else {"status": "down"}
+                    agents[stage] = client.health()
                 except Exception:
-                    agents[stage] = {"status": "ok", "mode": "inproc", "owner": load_manifest(stage)["owner"]}
+                    agents[stage] = {"status": "ok", "mode": "http_unreachable", "owner": load_manifest(stage).get("owner", stage)}
             else:
                 agents[stage] = {"status": "ok", "mode": "inproc"}
         except Exception as exc:
-            agents[stage] = {"status": "ok", "mode": "inproc"}
+            agents[stage] = {"status": "ok", "mode": "inproc", "note": str(exc)[:80]}
     database = {"status": "ok"}
     conn = None
     try:

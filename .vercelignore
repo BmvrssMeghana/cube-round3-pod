@@ -1,0 +1,14 @@
+# Vercel deployment ignore file
+# Large directories that should not be uploaded
+.venv/
+.git/
+node_modules/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.vscode/
+data/cube_unified.db
+data/input/
+out/

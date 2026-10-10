@@ -59,7 +59,7 @@ class HttpClient:
         return resp.json()
 
     def health(self) -> dict:
-        return httpx.get(f"{self.url}/health", timeout=5).json()
+        return httpx.get(f"{self.url}/health", timeout=2).json()
 
 
 def client_for(stage: str):
